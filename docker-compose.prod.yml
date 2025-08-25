@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: coptic_postgres_prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-coptic_app}
+      POSTGRES_USER: ${POSTGRES_USER:-coptic_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - coptic_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-coptic_user}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # .NET Backend API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: coptic_api_prod
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-coptic_app};Username=${POSTGRES_USER:-coptic_user};Password=${POSTGRES_PASSWORD}
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - Jwt__Key=${JWT_KEY}
+      - Jwt__Issuer=${JWT_ISSUER:-coptic-app-backend}
+      - Jwt__Audience=${JWT_AUDIENCE:-coptic-app-frontend}
+      - Jwt__ExpiryInHours=${JWT_EXPIRY_HOURS:-24}
+    volumes:
+      - ./uploads:/app/wwwroot/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - coptic_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: coptic_redis_prod
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - coptic_network
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  coptic_network:
+    driver: bridge

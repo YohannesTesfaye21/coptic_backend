@@ -194,6 +194,9 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<ChatHub>("/chatHub");
 
+// Add health check endpoint
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)

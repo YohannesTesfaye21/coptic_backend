@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: coptic_postgres
+    environment:
+      POSTGRES_DB: coptic_app
+      POSTGRES_USER: coptic_user
+      POSTGRES_PASSWORD: your_secure_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - coptic_network
+    restart: unless-stopped
+
+  # .NET Backend API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: coptic_api
+    ports:
+      - "5000:80"
+      - "5001:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=coptic_app;Username=coptic_user;Password=your_secure_password
+      - ASPNETCORE_URLS=http://+:80;https://+:443
+    volumes:
+      - ./uploads:/app/wwwroot/uploads
+    depends_on:
+      - postgres
+    networks:
+      - coptic_network
+    restart: unless-stopped
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: coptic_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - coptic_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  coptic_network:
+    driver: bridge

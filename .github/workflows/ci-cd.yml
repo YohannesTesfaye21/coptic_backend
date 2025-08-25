@@ -1,0 +1,96 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  POSTGRES_DB: coptic_app_test
+  POSTGRES_USER: coptic_user_test
+  POSTGRES_PASSWORD: test_password
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: |
+        dotnet restore coptic_app_backend.Api/coptic_app_backend.Api.csproj
+        dotnet restore coptic_app_backend.Application/coptic_app_backend.Application.csproj
+        dotnet restore coptic_app_backend.Domain/coptic_app_backend.Domain.csproj
+        dotnet restore coptic_app_backend.Infrastructure/coptic_app_backend.Infrastructure.csproj
+
+    - name: Build
+      run: |
+        dotnet build coptic_app_backend.Api/coptic_app_backend.Api.csproj --no-restore --configuration Release
+        dotnet build coptic_app_backend.Application/coptic_app_backend.Application.csproj --no-restore --configuration Release
+        dotnet build coptic_app_backend.Domain/coptic_app_backend.Domain.csproj --no-restore --configuration Release
+        dotnet build coptic_app_backend.Infrastructure/coptic_app_backend.Infrastructure.csproj --no-restore --configuration Release
+
+    - name: Test
+      run: |
+        dotnet test --no-build --verbosity normal --configuration Release
+      env:
+        ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=${{ env.POSTGRES_DB }};Username=${{ env.POSTGRES_USER }};Password=${{ env.POSTGRES_PASSWORD }}"
+
+    - name: Build Docker image
+      run: docker build -t coptic-backend:${{ github.sha }} .
+
+    - name: Upload Docker image to GitHub Container Registry
+      if: github.ref == 'refs/heads/main'
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Push Docker image
+      if: github.ref == 'refs/heads/main'
+      run: |
+        docker tag coptic-backend:${{ github.sha }} ghcr.io/${{ github.repository }}:latest
+        docker tag coptic-backend:${{ github.sha }} ghcr.io/${{ github.repository }}:${{ github.sha }}
+        docker push ghcr.io/${{ github.repository }}:latest
+        docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to production
+      run: |
+        echo "Deploying to production..."
+        # Add your deployment commands here
+        # This could be deploying to Azure, AWS, or any other cloud platform
+        echo "Deployment completed successfully!"
