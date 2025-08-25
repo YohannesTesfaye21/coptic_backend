@@ -1,0 +1,39 @@
+{
+  "Version": 1,
+  "Hash": "tKUj8JcI3leNqqxebzkGK082Fnu1th6cllCTpmgQTko=",
+  "Source": "coptic_app_backend.Api",
+  "BasePath": "_content/coptic_app_backend.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "coptic_app_backend.Api/wwwroot",
+      "Source": "coptic_app_backend.Api",
+      "ContentRoot": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/wwwroot/",
+      "BasePath": "_content/coptic_app_backend.Api",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/wwwroot/index.html",
+      "SourceId": "coptic_app_backend.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/wwwroot/",
+      "BasePath": "_content/coptic_app_backend.Api",
+      "RelativePath": "index.html",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/index.html"
+    }
+  ]
+}

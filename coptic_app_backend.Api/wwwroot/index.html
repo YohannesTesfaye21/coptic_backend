@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coptic Chat - WebSocket Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .messages {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: white;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .message.unread {
+            border-left-color: #dc3545;
+            background-color: #fff5f5;
+        }
+        .message .header {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .message .content {
+            font-weight: bold;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Coptic Chat - WebSocket Test Client</h1>
+        
+        <div class="form-group">
+            <label for="userId">User ID:</label>
+            <input type="text" id="userId" value="604c892c-4081-7074-cac6-d675a509db31" placeholder="Enter your user ID">
+        </div>
+        
+        <div class="form-group">
+            <button id="connectBtn" onclick="connect()">Connect to Chat</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+            <button id="joinBtn" onclick="joinChat()" disabled>Join Chat</button>
+        </div>
+        
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="unreadCount">0</div>
+                <div>Unread Messages</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="onlineUsers">0</div>
+                <div>Online Users</div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="targetUserId">Target User ID:</label>
+            <input type="text" id="targetUserId" value="604c892c-4081-7074-cac6-d675a509db31" placeholder="Enter target user ID">
+        </div>
+        
+        <div class="form-group">
+            <label for="messageType">Message Type:</label>
+            <select id="messageType">
+                <option value="USER_TO_USER">User to User</option>
+                <option value="ABUNE_TO_USER">Abune to User</option>
+                <option value="ABUNE_TO_ALL">Abune to All</option>
+                <option value="SYSTEM">System</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="messageContent">Message:</label>
+            <textarea id="messageContent" rows="3" placeholder="Enter your message"></textarea>
+        </div>
+        
+        <div class="form-group">
+            <button onclick="sendMessage()" id="sendBtn" disabled>Send Message</button>
+            <button onclick="getUnreadCount()" id="unreadBtn" disabled>Get Unread Count</button>
+            <button onclick="getOnlineUsers()" id="onlineBtn" disabled>Get Online Users</button>
+        </div>
+        
+        <h3>Messages</h3>
+        <div id="messages" class="messages"></div>
+    </div>
+
+    <script>
+        let connection;
+        let currentUserId;
+        
+        async function connect() {
+            try {
+                currentUserId = document.getElementById('userId').value;
+                if (!currentUserId) {
+                    alert('Please enter a User ID');
+                    return;
+                }
+                
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl("http://localhost:5199/chatHub")
+                    .build();
+                
+                // Set up event handlers
+                connection.on("UserConnected", (userId) => {
+                    addMessage(`User ${userId} connected`, 'system');
+                    updateOnlineUsers();
+                });
+                
+                connection.on("UserDisconnected", (userId) => {
+                    addMessage(`User ${userId} disconnected`, 'system');
+                    updateOnlineUsers();
+                });
+                
+                connection.on("NewMessage", (message) => {
+                    addMessage(`New message from ${message.senderName}: ${message.content}`, 'received', message);
+                });
+                
+                connection.on("MessageSent", (message) => {
+                    addMessage(`Message sent: ${message.content}`, 'sent', message);
+                });
+                
+                connection.on("MessageRead", (data) => {
+                    addMessage(`Message ${data.messageId} read by ${data.readBy}`, 'system');
+                });
+                
+                connection.on("UnreadCount", (data) => {
+                    document.getElementById('unreadCount').textContent = data.count;
+                });
+                
+                connection.on("OnlineUsers", (users) => {
+                    document.getElementById('onlineUsers').textContent = users.length;
+                });
+                
+                connection.on("UserTyping", (data) => {
+                    if (data.isTyping) {
+                        addMessage(`User ${data.userId} is typing...`, 'system');
+                    }
+                });
+                
+                await connection.start();
+                
+                updateStatus('Connected', true);
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+                document.getElementById('joinBtn').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('unreadBtn').disabled = false;
+                document.getElementById('onlineBtn').disabled = false;
+                
+                addMessage('Connected to chat server', 'system');
+                
+            } catch (err) {
+                console.error(err);
+                addMessage('Failed to connect: ' + err.message, 'error');
+            }
+        }
+        
+        async function disconnect() {
+            if (connection) {
+                await connection.stop();
+                updateStatus('Disconnected', false);
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = true;
+                document.getElementById('joinBtn').disabled = true;
+                document.getElementById('sendBtn').disabled = true;
+                document.getElementById('unreadBtn').disabled = true;
+                document.getElementById('onlineBtn').disabled = true;
+                addMessage('Disconnected from chat server', 'system');
+            }
+        }
+        
+        async function joinChat() {
+            if (connection && currentUserId) {
+                try {
+                    await connection.invoke("JoinChat", currentUserId);
+                    addMessage(`Joined chat as ${currentUserId}`, 'system');
+                    updateOnlineUsers();
+                } catch (err) {
+                    console.error(err);
+                    addMessage('Failed to join chat: ' + err.message, 'error');
+                }
+            }
+        }
+        
+        async function sendMessage() {
+            if (!connection || !currentUserId) {
+                alert('Please connect and join chat first');
+                return;
+            }
+            
+            const content = document.getElementById('messageContent').value;
+            const targetUserId = document.getElementById('targetUserId').value;
+            const messageType = document.getElementById('messageType').value;
+            
+            if (!content) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            try {
+                const message = {
+                    senderId: currentUserId,
+                    senderName: `User ${currentUserId.substring(0, 8)}`,
+                    content: content,
+                    messageType: messageType,
+                    targetUserId: targetUserId,
+                    timestamp: Date.now(),
+                    isRead: false,
+                    readBy: []
+                };
+                
+                await connection.invoke("SendMessage", message);
+                document.getElementById('messageContent').value = '';
+                
+            } catch (err) {
+                console.error(err);
+                addMessage('Failed to send message: ' + err.message, 'error');
+            }
+        }
+        
+        async function getUnreadCount() {
+            if (connection && currentUserId) {
+                try {
+                    await connection.invoke("GetUnreadCount", currentUserId);
+                } catch (err) {
+                    console.error(err);
+                    addMessage('Failed to get unread count: ' + err.message, 'error');
+                }
+            }
+        }
+        
+        async function getOnlineUsers() {
+            if (connection) {
+                try {
+                    await connection.invoke("GetOnlineUsers");
+                } catch (err) {
+                    console.error(err);
+                    addMessage('Failed to get online users: ' + err.message, 'error');
+                }
+            }
+        }
+        
+        function addMessage(text, type, messageData = null) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type === 'received' && messageData && !messageData.isRead ? 'unread' : ''}`;
+            
+            const header = document.createElement('div');
+            header.className = 'header';
+            header.textContent = `${new Date().toLocaleTimeString()} - ${type.toUpperCase()}`;
+            
+            const content = document.createElement('div');
+            content.className = 'content';
+            content.textContent = text;
+            
+            messageDiv.appendChild(header);
+            messageDiv.appendChild(content);
+            
+            if (messageData) {
+                const details = document.createElement('div');
+                details.style.fontSize = '11px';
+                details.style.color = '#666';
+                details.textContent = `ID: ${messageData.id} | Type: ${messageData.messageType}`;
+                messageDiv.appendChild(details);
+            }
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function updateStatus(text, connected) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = text;
+            statusDiv.className = `status ${connected ? 'connected' : 'disconnected'}`;
+        }
+        
+        function updateOnlineUsers() {
+            if (connection) {
+                getOnlineUsers();
+            }
+        }
+        
+        // Auto-connect on page load
+        window.onload = function() {
+            // Auto-connect after a short delay
+            setTimeout(() => {
+                if (document.getElementById('userId').value) {
+                    connect();
+                }
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

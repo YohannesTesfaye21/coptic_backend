@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "xcxHS85U5z8=",
+  "success": true,
+  "projectFilePath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Application/coptic_app_backend.Application.csproj",
+  "expectedPackageFiles": [
+    "/Users/m2pro/.nuget/packages/microsoft.extensions.dependencyinjection.abstractions/8.0.0/microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "/Users/m2pro/.nuget/packages/microsoft.extensions.logging.abstractions/8.0.0/microsoft.extensions.logging.abstractions.8.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,540 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>coptic_app_backend.Api</name>
+    </assembly>
+    <members>
+        <member name="T:coptic_app_backend.Api.Controllers.AbuneController">
+            <summary>
+            Abune management controller for spiritual leaders and community management
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.AbuneController.CreateAbune(coptic_app_backend.Api.Controllers.CreateAbuneRequest)">
+            <summary>
+            Create a new Abune user (admin operation)
+            </summary>
+            <param name="request">Abune creation information</param>
+            <returns>Created Abune user</returns>
+            <response code="201">Abune created successfully</response>
+            <response code="400">Invalid Abune data</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.CreateAbuneRequest">
+            <summary>
+            Abune creation request model
+            </summary>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.CreateAbuneRequest.Email">
+            <summary>
+            Abune's email address (used as username)
+            </summary>
+            <example>abune@church.com</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.CreateAbuneRequest.Password">
+            <summary>
+            Abune's password (minimum 8 characters)
+            </summary>
+            <example>abune123</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.CreateAbuneRequest.Name">
+            <summary>
+            Abune's display name
+            </summary>
+            <example>Father Michael</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.CreateAbuneRequest.ChurchName">
+            <summary>
+            Name of the church/community
+            </summary>
+            <example>St. Mary Coptic Church</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.CreateAbuneRequest.Location">
+            <summary>
+            Geographic location
+            </summary>
+            <example>Cairo, Egypt</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.CreateAbuneRequest.Bio">
+            <summary>
+            Abune's biography/description
+            </summary>
+            <example>Spiritual leader of our community</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.CreateAbuneRequest.ProfileImageUrl">
+            <summary>
+            URL to profile image
+            </summary>
+            <example>https://example.com/profile.jpg</example>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.AuthController">
+            <summary>
+            Authentication controller for user registration, login, and account management
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.AuthController.Register(coptic_app_backend.Api.Controllers.RegisterRequest)">
+            <summary>
+            Register a new regular user under a specific Abune
+            </summary>
+            <param name="request">User registration information including AbuneId</param>
+            <returns>Registration result with user details</returns>
+            <response code="200">User registered successfully</response>
+            <response code="400">Invalid registration data or missing AbuneId</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.AuthController.Login(coptic_app_backend.Api.Controllers.LoginRequest)">
+            <summary>
+            Authenticate user and return JWT token
+            </summary>
+            <param name="request">Login credentials</param>
+            <returns>Authentication result with JWT token and user information</returns>
+            <response code="200">Login successful</response>
+            <response code="400">Invalid login data</response>
+            <response code="401">Invalid credentials</response>
+            <response code="403">Account not approved or not active</response>
+            <response code="404">User not found</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.AuthController.UpdateDeviceToken(coptic_app_backend.Api.Controllers.UpdateDeviceTokenRequest)">
+            <summary>
+            Update user's device token for push notifications
+            </summary>
+            <param name="request">Device token update request</param>
+            <returns>Update result</returns>
+            <response code="200">Device token updated successfully</response>
+            <response code="400">Invalid request data</response>
+            <response code="401">Authentication required</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.RegisterRequest">
+            <summary>
+            User registration request model
+            </summary>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.RegisterRequest.FullName">
+            <summary>
+            User's full name
+            </summary>
+            <example>John Doe</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.RegisterRequest.Email">
+            <summary>
+            User's email address (used as username)
+            </summary>
+            <example>john.doe@example.com</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.RegisterRequest.Gender">
+            <summary>
+            User's gender
+            </summary>
+            <example>Male</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.RegisterRequest.PhoneNumber">
+            <summary>
+            User's phone number
+            </summary>
+            <example>+1234567890</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.RegisterRequest.DeviceToken">
+            <summary>
+            User's device token for push notifications
+            </summary>
+            <example>fcm-device-token-here</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.RegisterRequest.Password">
+            <summary>
+            User's password (minimum 8 characters)
+            </summary>
+            <example>password123</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.RegisterRequest.ConfirmPassword">
+            <summary>
+            Password confirmation (must match Password)
+            </summary>
+            <example>password123</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.RegisterRequest.AbuneId">
+            <summary>
+            ID of the Abune this user belongs to (required for regular users)
+            </summary>
+            <example>abune-guid-here</example>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.LoginRequest">
+            <summary>
+            User login request model
+            </summary>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.LoginRequest.Email">
+            <summary>
+            User's email address
+            </summary>
+            <example>john.doe@example.com</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.LoginRequest.Password">
+            <summary>
+            User's password
+            </summary>
+            <example>password123</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.LoginRequest.DeviceToken">
+            <summary>
+            User's device token for push notifications (optional)
+            </summary>
+            <example>fcm-device-token-here</example>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.UpdateDeviceTokenRequest">
+            <summary>
+            Device token update request model
+            </summary>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.UpdateDeviceTokenRequest.DeviceToken">
+            <summary>
+            New device token for push notifications
+            </summary>
+            <example>fcm-device-token-here</example>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.AuthResponse">
+            <summary>
+            Authentication response model
+            </summary>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.Message">
+            <summary>
+            Response message
+            </summary>
+            <example>Login successful</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.UserId">
+            <summary>
+            User's unique identifier
+            </summary>
+            <example>user-guid-here</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.Email">
+            <summary>
+            User's email address
+            </summary>
+            <example>john.doe@example.com</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.FullName">
+            <summary>
+            User's full name
+            </summary>
+            <example>John Doe</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.Gender">
+            <summary>
+            User's gender
+            </summary>
+            <example>Male</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.PhoneNumber">
+            <summary>
+            User's phone number
+            </summary>
+            <example>+1234567890</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.DeviceToken">
+            <summary>
+            User's device token for push notifications
+            </summary>
+            <example>fcm-device-token-here</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.UserType">
+            <summary>
+            User type (Regular or Abune)
+            </summary>
+            <example>Regular</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.IsApproved">
+            <summary>
+            Whether the user is approved by their Abune
+            </summary>
+            <example>false</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.AbuneId">
+            <summary>
+            ID of the Abune this user belongs to
+            </summary>
+            <example>abune-guid-here</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.AccessToken">
+            <summary>
+            JWT access token for authentication
+            </summary>
+            <example>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.RefreshToken">
+            <summary>
+            JWT refresh token
+            </summary>
+            <example>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.ExpiresIn">
+            <summary>
+            Token expiration time in seconds
+            </summary>
+            <example>3600</example>
+        </member>
+        <member name="P:coptic_app_backend.Api.Controllers.AuthResponse.RequiresConfirmation">
+            <summary>
+            Whether user confirmation is required
+            </summary>
+            <example>false</example>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.ChatController">
+            <summary>
+            Chat controller for hierarchical Abune-User communication
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.SendMessage(coptic_app_backend.Api.Controllers.SendMessageRequest)">
+            <summary>
+            Send a text message (Abune to User or User to Abune only)
+            </summary>
+            <param name="request">Message request</param>
+            <returns>Sent message</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.SendMediaMessage(coptic_app_backend.Api.Controllers.SendMediaMessageRequest)">
+            <summary>
+            Send a media message (Abune to User or User to Abune only)
+            </summary>
+            <param name="request">Media message request</param>
+            <returns>Sent message</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.SendBroadcastMessage(coptic_app_backend.Api.Controllers.SendBroadcastMessageRequest)">
+            <summary>
+            Send a broadcast message to all community members (Abune only)
+            </summary>
+            <param name="request">Broadcast message request</param>
+            <returns>Sent broadcast message</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.SendBroadcastMediaMessage(coptic_app_backend.Api.Controllers.SendBroadcastMediaMessageRequest)">
+            <summary>
+            Send a broadcast media message to all community members (Abune only)
+            </summary>
+            <param name="request">Broadcast media message request</param>
+            <returns>Sent broadcast message</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.DeleteMessage(System.String)">
+            <summary>
+            Delete a message (only sender can delete)
+            </summary>
+            <param name="messageId">Message ID to delete</param>
+            <returns>Delete result</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.MarkMessageAsRead(System.String)">
+            <summary>
+            Mark a message as read
+            </summary>
+            <param name="messageId">Message ID to mark as read</param>
+            <returns>Mark as read result</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.AddReaction(System.String,coptic_app_backend.Api.Controllers.AddReactionRequest)">
+            <summary>
+            Add a reaction to a message
+            </summary>
+            <param name="messageId">Message ID</param>
+            <param name="request">Reaction request</param>
+            <returns>Add reaction result</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.RemoveReaction(System.String)">
+            <summary>
+            Remove a reaction from a message
+            </summary>
+            <param name="messageId">Message ID</param>
+            <returns>Remove reaction result</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.GetConversations">
+            <summary>
+            Get user's conversations
+            </summary>
+            <returns>List of conversations</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.GetConversationMessages(System.String,System.Int32,System.Nullable{System.Int64})">
+            <summary>
+            Get messages from a specific conversation
+            </summary>
+            <param name="otherUserId">Other participant's user ID</param>
+            <param name="limit">Number of messages to retrieve</param>
+            <param name="beforeTimestamp">Get messages before this timestamp</param>
+            <returns>List of messages</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.GetUnreadCount(System.String)">
+            <summary>
+            Get unread count for a specific conversation
+            </summary>
+            <param name="conversationId">Conversation ID</param>
+            <returns>Unread count</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.GetUnreadCounts">
+            <summary>
+            Get unread counts for all conversations
+            </summary>
+            <returns>Dictionary of conversation ID to unread count</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.GetCommunityMessages(System.Int32,System.Nullable{System.Int64})">
+            <summary>
+            Get community messages (non-broadcast)
+            </summary>
+            <param name="limit">Number of messages to retrieve</param>
+            <param name="beforeTimestamp">Get messages before this timestamp</param>
+            <returns>List of community messages</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.GetBroadcastMessages(System.Int32,System.Nullable{System.Int64})">
+            <summary>
+            Get broadcast messages
+            </summary>
+            <param name="limit">Number of messages to retrieve</param>
+            <param name="beforeTimestamp">Get messages before this timestamp</param>
+            <returns>List of broadcast messages</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.SearchMessages(System.String,System.Int32)">
+            <summary>
+            Search messages in user's conversations
+            </summary>
+            <param name="searchTerm">Search term</param>
+            <param name="limit">Number of results to return</param>
+            <returns>List of matching messages</returns>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.FileUploadController">
+            <summary>
+            File upload controller for chat media files
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FileUploadController.UploadChatFile(coptic_app_backend.Api.Controllers.ChatFileUploadRequest)">
+            <summary>
+            Upload a file for a chat message
+            </summary>
+            <param name="request">File upload request with chat context</param>
+            <returns>File upload result with URL</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FileUploadController.UploadBroadcastFile(coptic_app_backend.Api.Controllers.BroadcastFileUploadRequest)">
+            <summary>
+            Upload a file for a broadcast message (Abune only)
+            </summary>
+            <param name="request">Broadcast file upload request</param>
+            <returns>File upload result with URL</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FileUploadController.GetChatFiles(System.String,System.Nullable{coptic_app_backend.Domain.Models.MessageType})">
+            <summary>
+            Get chat files for a conversation
+            </summary>
+            <param name="recipientId">Other participant's user ID</param>
+            <param name="messageType">Optional message type filter</param>
+            <returns>List of chat files</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FileUploadController.GetBroadcastFiles(System.Nullable{coptic_app_backend.Domain.Models.MessageType})">
+            <summary>
+            Get broadcast files for the community
+            </summary>
+            <param name="messageType">Optional message type filter</param>
+            <returns>List of broadcast files</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FileUploadController.DeleteFile(System.String)">
+            <summary>
+            Delete a file (only file owner can delete)
+            </summary>
+            <param name="fileUrl">File URL to delete</param>
+            <returns>Delete result</returns>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.UserController">
+            <summary>
+            User management controller with role-based access control
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.UserController.GetUsers">
+            <summary>
+            Get all users under the current Abune's community (Abune only)
+            </summary>
+            <returns>List of community members</returns>
+            <response code="200">Community members retrieved successfully</response>
+            <response code="400">Abune ID not found in token</response>
+            <response code="403">Access denied - Abune only</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.UserController.GetCurrentUserProfile">
+            <summary>
+            Get the current authenticated user's profile
+            </summary>
+            <returns>Current user's profile information</returns>
+            <response code="200">Profile retrieved successfully</response>
+            <response code="400">User ID not found in token</response>
+            <response code="401">Authentication required</response>
+            <response code="404">User profile not found</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="T:coptic_app_backend.Api.Hubs.ChatHub">
+            <summary>
+            SignalR hub for real-time chat features
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.SendMessage(System.String,System.String,coptic_app_backend.Domain.Models.MessageType,System.String)">
+            <summary>
+            Send a message to a specific user
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.SendMediaMessage(System.String,System.String,System.String,System.Int64,System.String,coptic_app_backend.Domain.Models.MessageType,System.Nullable{System.Int32})">
+            <summary>
+            Send a media message to a specific user
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.SendBroadcastMessage(System.String,coptic_app_backend.Domain.Models.MessageType)">
+            <summary>
+            Send a broadcast message to all community members
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.SendBroadcastMediaMessage(System.String,System.String,System.Int64,System.String,coptic_app_backend.Domain.Models.MessageType,System.Nullable{System.Int32})">
+            <summary>
+            Send a broadcast media message to all community members
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.SendTypingIndicator(System.String,System.Boolean)">
+            <summary>
+            Send typing indicator to a specific user
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.MarkMessageAsRead(System.String)">
+            <summary>
+            Mark a message as read
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.AddReaction(System.String,System.String)">
+            <summary>
+            Add reaction to a message
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.GetOnlineUsers">
+            <summary>
+            Get online users in the community
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.UpdateLastSeen">
+            <summary>
+            Update user's last seen timestamp
+            </summary>
+        </member>
+        <member name="T:coptic_app_backend.Api.Migrations.InitialCreate">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.InitialCreate.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.InitialCreate.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.InitialCreate.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:coptic_app_backend.Api.Migrations.AddHierarchicalUserSystem">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddHierarchicalUserSystem.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddHierarchicalUserSystem.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddHierarchicalUserSystem.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+    </members>
+</doc>

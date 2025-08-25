@@ -1,0 +1,327 @@
+{
+  "format": 1,
+  "restore": {
+    "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/coptic_app_backend.Api.csproj": {}
+  },
+  "projects": {
+    "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/coptic_app_backend.Api.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/coptic_app_backend.Api.csproj",
+        "projectName": "coptic_app_backend.Api",
+        "projectPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/coptic_app_backend.Api.csproj",
+        "packagesPath": "/Users/m2pro/.nuget/packages/",
+        "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/obj/",
+        "projectStyle": "PackageReference",
+        "UsingMicrosoftNETSdk": false,
+        "configFilePaths": [
+          "/Users/m2pro/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Application/coptic_app_backend.Application.csproj": {
+                "projectPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Application/coptic_app_backend.Application.csproj"
+              },
+              "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/coptic_app_backend.Domain.csproj": {
+                "projectPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/coptic_app_backend.Domain.csproj"
+              },
+              "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/coptic_app_backend.Infrastructure.csproj": {
+                "projectPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/coptic_app_backend.Infrastructure.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.AspNetCore.OpenApi": {
+              "target": "Package",
+              "version": "[8.0.11, )"
+            },
+            "Microsoft.AspNetCore.SignalR": {
+              "target": "Package",
+              "version": "[1.1.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.6.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.404/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Application/coptic_app_backend.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Application/coptic_app_backend.Application.csproj",
+        "projectName": "coptic_app_backend.Application",
+        "projectPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Application/coptic_app_backend.Application.csproj",
+        "packagesPath": "/Users/m2pro/.nuget/packages/",
+        "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Application/obj/",
+        "projectStyle": "PackageReference",
+        "UsingMicrosoftNETSdk": false,
+        "configFilePaths": [
+          "/Users/m2pro/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/coptic_app_backend.Domain.csproj": {
+                "projectPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/coptic_app_backend.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.Extensions.Logging.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.404/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/coptic_app_backend.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/coptic_app_backend.Domain.csproj",
+        "projectName": "coptic_app_backend.Domain",
+        "projectPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/coptic_app_backend.Domain.csproj",
+        "packagesPath": "/Users/m2pro/.nuget/packages/",
+        "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/",
+        "projectStyle": "PackageReference",
+        "UsingMicrosoftNETSdk": false,
+        "configFilePaths": [
+          "/Users/m2pro/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.404/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/coptic_app_backend.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/coptic_app_backend.Infrastructure.csproj",
+        "projectName": "coptic_app_backend.Infrastructure",
+        "projectPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/coptic_app_backend.Infrastructure.csproj",
+        "packagesPath": "/Users/m2pro/.nuget/packages/",
+        "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/",
+        "projectStyle": "PackageReference",
+        "UsingMicrosoftNETSdk": false,
+        "configFilePaths": [
+          "/Users/m2pro/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/coptic_app_backend.Domain.csproj": {
+                "projectPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/coptic_app_backend.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Tools": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.Configuration.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.Configuration.Binder": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.Logging.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[13.0.3, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[7.0.3, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.404/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

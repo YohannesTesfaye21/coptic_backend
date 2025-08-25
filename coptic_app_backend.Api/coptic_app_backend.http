@@ -1,0 +1,6 @@
+@coptic_app_backend_HostAddress = http://localhost:5199
+
+GET {{coptic_app_backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

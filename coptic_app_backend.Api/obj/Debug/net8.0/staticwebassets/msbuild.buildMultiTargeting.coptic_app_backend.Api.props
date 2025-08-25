@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="../build/coptic_app_backend.Api.props" />
+</Project>
