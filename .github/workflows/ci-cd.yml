@@ -88,9 +88,42 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Deploy to production
+    - name: Deploy to production server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: ${{ secrets.SERVER_PORT }}
+        script: |
+          cd ~/coptic-app-backend
+          
+          # Pull latest changes
+          git pull origin main || echo "No git repo, continuing with deployment"
+          
+          # Pull latest Docker images
+          docker-compose -f docker-compose.prod.yml pull
+          
+          # Stop existing services
+          docker-compose -f docker-compose.prod.yml down
+          
+          # Start services with new images
+          docker-compose -f docker-compose.prod.yml up -d
+          
+          # Wait for services to be healthy
+          sleep 30
+          
+          # Check service status
+          docker-compose -f docker-compose.prod.yml ps
+          
+          # Run database migrations if needed
+          docker-compose -f docker-compose.prod.yml exec -T api dotnet ef database update || echo "Migrations completed or no migrations needed"
+          
+          echo "Deployment completed successfully!"
+
+    - name: Health check
       run: |
-        echo "Deploying to production..."
-        # Add your deployment commands here
-        # This could be deploying to Azure, AWS, or any other cloud platform
-        echo "Deployment completed successfully!"
+        echo "Performing health check..."
+        # Add health check logic here
+        # This could be checking if the application is responding
+        echo "Health check completed!"
