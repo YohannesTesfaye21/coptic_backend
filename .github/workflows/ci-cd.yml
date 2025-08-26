@@ -114,6 +114,22 @@ jobs:
           mkdir -p ~/coptic-app-backend
           cd ~/coptic-app-backend
           
+          # Authenticate with GitHub Container Registry
+          echo "🔐 Authenticating with GitHub Container Registry..."
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
+          
+          # Copy necessary files to server
+          echo "📁 Copying deployment files..."
+          if [ -f "docker-compose.prod.yml" ]; then
+            cp docker-compose.prod.yml ~/coptic-app-backend/
+          fi
+          if [ -f "nginx-simple.conf" ]; then
+            cp nginx-simple.conf ~/coptic-app-backend/
+          fi
+          if [ -f "env.production" ]; then
+            cp env.production ~/coptic-app-backend/
+          fi
+          
           # Copy environment file
           echo "📋 Setting up environment..."
           cp env.production .env || echo "⚠️  env.production not found, using existing .env"
