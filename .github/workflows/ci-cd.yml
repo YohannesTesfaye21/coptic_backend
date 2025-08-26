@@ -74,10 +74,10 @@ jobs:
     - name: Push Docker image
       if: github.ref == 'refs/heads/main'
       run: |
-        docker tag coptic-backend:${{ github.sha }} ghcr.io/${{ github.repository }}:latest
-        docker tag coptic-backend:${{ github.sha }} ghcr.io/${{ github.repository }}:${{ github.sha }}
-        docker push ghcr.io/${{ github.repository }}:latest
-        docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
+        docker tag coptic-backend:${{ github.sha }} ghcr.io/${{ github.actor }}/coptic-backend:latest
+        docker tag coptic-backend:${{ github.sha }} ghcr.io/${{ github.actor }}/coptic-backend:${{ github.sha }}
+        docker push ghcr.io/${{ github.actor }}/coptic-backend:latest
+        docker push ghcr.io/${{ github.actor }}/coptic-backend:${{ github.sha }}
 
   deploy:
     needs: build-and-test
