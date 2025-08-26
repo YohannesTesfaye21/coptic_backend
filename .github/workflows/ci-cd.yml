@@ -132,7 +132,29 @@ jobs:
           
           # Copy environment file
           echo "📋 Setting up environment..."
-          cp env.production .env || echo "⚠️  env.production not found, using existing .env"
+          if [ -f "env.production" ]; then
+            cp env.production .env
+          else
+            echo "⚠️  env.production not found, creating basic .env"
+            cat > .env << 'EOF'
+# Database Configuration
+POSTGRES_DB=coptic_app
+POSTGRES_USER=coptic_user
+POSTGRES_PASSWORD=your_secure_password_here
+
+# JWT Configuration
+JWT_KEY=this-is-a-very-long-secret-key-for-jwt-signing-that-is-at-least-64-characters-long-for-security
+JWT_ISSUER=coptic-app-backend
+JWT_AUDIENCE=coptic-app-frontend
+JWT_EXPIRY_HOURS=24
+
+# Redis Configuration
+REDIS_PASSWORD=your_redis_password_here
+
+# Application Configuration
+ASPNETCORE_ENVIRONMENT=Production
+EOF
+          fi
           
           # Pull latest changes if git repo exists
           if [ -d ".git" ]; then
@@ -141,6 +163,10 @@ jobs:
           else
             echo "📁 No git repo found, continuing with deployment"
           fi
+          
+          # Re-authenticate before pulling images to ensure permissions persist
+          echo "🔐 Re-authenticating with GitHub Container Registry..."
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
           
           # Pull latest Docker images
           echo "🐳 Pulling latest Docker images..."
