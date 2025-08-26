@@ -168,11 +168,20 @@ jobs:
           
           # Configure Nginx if needed
           echo "🌐 Configuring Nginx..."
+          if ! command -v nginx &> /dev/null; then
+            echo "📦 Installing Nginx..."
+            apt update && apt install -y nginx
+          fi
+          
           if [ ! -f /etc/nginx/sites-enabled/coptic-app ]; then
             echo "📝 Setting up Nginx configuration..."
-            cp nginx-simple.conf /etc/nginx/sites-available/coptic-app
-            ln -sf /etc/nginx/sites-available/coptic-app /etc/nginx/sites-enabled/
-            nginx -t && systemctl reload nginx
+            if [ -f "nginx-simple.conf" ]; then
+              cp nginx-simple.conf /etc/nginx/sites-available/coptic-app
+              ln -sf /etc/nginx/sites-available/coptic-app /etc/nginx/sites-enabled/
+              nginx -t && systemctl reload nginx
+            else
+              echo "⚠️  nginx-simple.conf not found, skipping Nginx setup"
+            fi
           fi
           
           echo "✅ Deployment completed successfully!"
