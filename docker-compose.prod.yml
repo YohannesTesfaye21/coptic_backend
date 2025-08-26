@@ -1,4 +1,4 @@
-version: '3.8'
+# Docker Compose version is now inferred automatically
 
 services:
   # PostgreSQL Database
@@ -24,17 +24,14 @@ services:
 
   # .NET Backend API
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/yohannestesfaye21/coptic_backend:latest
     container_name: coptic_api_prod
     ports:
-      - "80:80"
-      - "443:443"
+      - "5000:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-coptic_app};Username=${POSTGRES_USER:-coptic_user};Password=${POSTGRES_PASSWORD}
-      - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ASPNETCORE_URLS=http://+:80
       - Jwt__Key=${JWT_KEY}
       - Jwt__Issuer=${JWT_ISSUER:-coptic-app-backend}
       - Jwt__Audience=${JWT_AUDIENCE:-coptic-app-frontend}
@@ -47,11 +44,6 @@ services:
     networks:
       - coptic_network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # Redis for caching
   redis:

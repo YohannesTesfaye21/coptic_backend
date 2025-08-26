@@ -94,32 +94,76 @@ jobs:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
-        port: ${{ secrets.SERVER_PORT }}
+        port: ${{ secrets.SERVER_PORT || '22' }}
         script: |
+          echo "🚀 Starting deployment..."
+          
+          # Ensure SSH access is preserved in firewall
+          echo "🛡️  Configuring firewall safely..."
+          ufw allow ssh || ufw allow 22/tcp
+          ufw allow 80/tcp
+          ufw allow 443/tcp
+          ufw allow 5000/tcp
+          ufw --force enable
+          
+          # Verify SSH is still accessible
+          echo "🔍 Verifying SSH access..."
+          ufw status | grep -E "(22|ssh)" || echo "⚠️  SSH port not found in firewall rules"
+          
+          # Create app directory if it doesn't exist
+          mkdir -p ~/coptic-app-backend
           cd ~/coptic-app-backend
           
-          # Pull latest changes
-          git pull origin main || echo "No git repo, continuing with deployment"
+          # Copy environment file
+          echo "📋 Setting up environment..."
+          cp env.production .env || echo "⚠️  env.production not found, using existing .env"
+          
+          # Pull latest changes if git repo exists
+          if [ -d ".git" ]; then
+            echo "📥 Pulling latest changes..."
+            git pull origin main
+          else
+            echo "📁 No git repo found, continuing with deployment"
+          fi
           
           # Pull latest Docker images
+          echo "🐳 Pulling latest Docker images..."
           docker-compose -f docker-compose.prod.yml pull
           
           # Stop existing services
+          echo "🛑 Stopping existing services..."
           docker-compose -f docker-compose.prod.yml down
           
           # Start services with new images
+          echo "🚀 Starting services..."
           docker-compose -f docker-compose.prod.yml up -d
           
           # Wait for services to be healthy
+          echo "⏳ Waiting for services to start..."
           sleep 30
           
           # Check service status
+          echo "🔍 Checking service status..."
           docker-compose -f docker-compose.prod.yml ps
           
           # Run database migrations if needed
+          echo "🗄️  Running database migrations..."
           docker-compose -f docker-compose.prod.yml exec -T api dotnet ef database update || echo "Migrations completed or no migrations needed"
           
-          echo "Deployment completed successfully!"
+          # Configure Nginx if needed
+          echo "🌐 Configuring Nginx..."
+          if [ ! -f /etc/nginx/sites-enabled/coptic-app ]; then
+            echo "📝 Setting up Nginx configuration..."
+            cp nginx-simple.conf /etc/nginx/sites-available/coptic-app
+            ln -sf /etc/nginx/sites-available/coptic-app /etc/nginx/sites-enabled/
+            nginx -t && systemctl reload nginx
+          fi
+          
+          echo "✅ Deployment completed successfully!"
+          echo "🌐 Your app should be accessible at:"
+          echo "   - Direct: http://${{ secrets.SERVER_HOST }}:5000"
+          echo "   - Proxy: http://${{ secrets.SERVER_HOST }}"
+          echo "   - Swagger: http://${{ secrets.SERVER_HOST }}/swagger"
 
     - name: Health check
       run: |
