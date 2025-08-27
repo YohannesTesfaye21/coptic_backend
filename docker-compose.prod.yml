@@ -24,7 +24,7 @@ services:
 
   # .NET Backend API
   api:
-    image: ghcr.io/yohannestesfaye21/coptic_backend:latest
+    image: ghcr.io/yohannestesfaye21/coptic-backend:latest
     container_name: coptic_api_prod
     ports:
       - "5000:80"
