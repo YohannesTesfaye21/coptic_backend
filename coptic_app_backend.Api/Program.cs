@@ -58,7 +58,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 
     // Add operation filters for better documentation
-    c.OperationFilter<coptic_app_backend.Api.Filters.SwaggerDefaultValues>();
+    // c.OperationFilter<coptic_app_backend.Api.Filters.SwaggerDefaultValues>();
 });
 
 // Configure JWT Authentication
