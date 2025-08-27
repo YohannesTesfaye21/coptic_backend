@@ -95,6 +95,7 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         port: ${{ secrets.SERVER_PORT || '22' }}
+
         script: |
           echo "🚀 Starting deployment..."
           
@@ -116,7 +117,7 @@ jobs:
           
           # Authenticate with GitHub Container Registry
           echo "🔐 Authenticating with GitHub Container Registry..."
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
+          echo "${{ secrets.PAT_TOKEN }}" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
           
           # Copy necessary files to server
           echo "📁 Copying deployment files..."
@@ -164,7 +165,7 @@ jobs:
           
           # Re-authenticate before pulling images to ensure permissions persist
           echo "🔐 Re-authenticating with GitHub Container Registry..."
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
+          echo "${{ secrets.PAT_TOKEN }}" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
           
           # Pull latest Docker images
           echo "🐳 Pulling latest Docker images..."
