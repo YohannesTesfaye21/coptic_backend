@@ -60,24 +60,21 @@ jobs:
       env:
         ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=${{ env.POSTGRES_DB }};Username=${{ env.POSTGRES_USER }};Password=${{ env.POSTGRES_PASSWORD }}"
 
-    - name: Build Docker image
-      run: docker build -t coptic-backend:${{ github.sha }} .
-
-    - name: Upload Docker image to GitHub Container Registry
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build and push Docker image
       if: github.ref == 'refs/heads/main'
-      uses: docker/login-action@v3
+      uses: docker/build-push-action@v5
       with:
-        registry: ghcr.io
-        username: yohannestesfaye21
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Push Docker image
-      if: github.ref == 'refs/heads/main'
-      run: |
-        docker tag coptic-backend:${{ github.sha }} ghcr.io/yohannestesfaye21/coptic-backend:latest
-        docker tag coptic-backend:${{ github.sha }} ghcr.io/yohannestesfaye21/coptic-backend:${{ github.sha }}
-        docker push ghcr.io/yohannestesfaye21/coptic-backend:latest
-        docker push ghcr.io/yohannestesfaye21/coptic-backend:${{ github.sha }}
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: |
+          ghcr.io/yohannestesfaye21/coptic-backend:latest
+          ghcr.io/yohannestesfaye21/coptic-backend:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
   deploy:
     needs: build-and-test
