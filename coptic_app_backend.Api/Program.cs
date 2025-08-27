@@ -171,11 +171,13 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Enable Swagger in both Development and Production for API documentation
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Coptic App Backend API v1");
+    c.RoutePrefix = "swagger";
+});
 
 // Only use HTTPS redirection in production
 if (!app.Environment.IsDevelopment())
