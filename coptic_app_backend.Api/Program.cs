@@ -159,12 +159,22 @@ builder.Services.AddCors(options =>
                 "http://localhost:5173", 
                 "http://localhost:5199",
                 "https://localhost:7061",
+                "https://localhost:44364",
+                "http://162.243.165.212:5000",
                 "https://d89233c7fbfaede4d16e1cd39e342d3f.serveo.net", // Allow all serveo.net subdomains
                 "https://*.loca.lt"     // Allow all loca.lt subdomains
               )
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials(); // Required for SignalR
+    });
+    
+    // Add a more permissive policy for development
+    options.AddPolicy("AllowAllDev", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
@@ -183,8 +193,13 @@ app.UseSwaggerUI(c =>
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
+    app.UseCors("AllowAll");
 }
-app.UseCors("AllowAll");
+else
+{
+    // Use more permissive CORS in development
+    app.UseCors("AllowAllDev");
+}
 
 // Serve static files (for the HTML test client and uploads)
 app.UseStaticFiles();
