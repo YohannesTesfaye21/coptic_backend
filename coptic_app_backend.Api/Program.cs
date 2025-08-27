@@ -121,7 +121,7 @@ builder.Services.AddSignalR();
 // Configure PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), 
-        b => b.MigrationsAssembly("coptic_app_backend.Infrastructure")));
+        b => b.MigrationsAssembly("coptic_app_backend.Api")));
 
 builder.Services.AddHttpClient();
 
