@@ -3,7 +3,7 @@
 ## 🚀 **Quick Start Checklist**
 
 ### **1. Environment Setup**
-- [ ] Backend running on `https://localhost:7061`
+- [ ] Backend running on `https:/e03321200bc93c5e4395907c3d7dfa54.serveo.net/`
 - [ ] PostgreSQL database accessible
 - [ ] File storage directories created
 - [ ] JWT secret key configured
@@ -11,7 +11,7 @@
 ### **2. First API Call**
 ```bash
 # Test if API is running
-curl https://localhost:7061/api/health
+curl https://e03321200bc93c5e4395907c3d7dfa54.serveo.net//api/health
 
 # Expected: 200 OK
 ```

@@ -1,0 +1,87 @@
+### Test Regular User Registration with AbuneId (AuthController)
+POST https://localhost:7061/api/Auth/register
+Content-Type: application/json
+
+{
+  "fullName": "John Doe",
+  "email": "john@example.com", 
+  "password": "password123",
+  "confirmPassword": "password123",
+  "gender": "Male",
+  "phoneNumber": "+1234567890",
+  "deviceToken": "fcm-token-here",
+  "abuneId": "some-abune-id-here"
+}
+
+### Test User Creation with AbuneId (UserController) - NOW FIXED!
+POST https://localhost:7061/api/User
+Content-Type: application/json
+
+{
+  "username": "jane@example.com",
+  "email": "jane@example.com",
+  "phoneNumber": "+1234567890",
+  "name": "Jane Doe",
+  "gender": "Female",
+  "deviceToken": "fcm-token-here",
+  "abuneId": "some-abune-id-here"
+}
+
+### Test Registration without AbuneId (should fail)
+POST https://localhost:7061/api/Auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Jane Doe",
+  "email": "jane@example.com", 
+  "password": "password123",
+  "confirmPassword": "password123",
+  "gender": "Female",
+  "phoneNumber": "+1234567890",
+  "deviceToken": "fcm-token-here"
+}
+
+### Test Registration with empty AbuneId (should fail)
+POST https://localhost:7061/api/Auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Bob Smith",
+  "email": "bob@example.com", 
+  "password": "password123",
+  "confirmPassword": "password123",
+  "gender": "Male",
+  "phoneNumber": "+1234567890",
+  "deviceToken": "fcm-token-here",
+  "abuneId": ""
+}
+
+### Test Registration with invalid AbuneId (should fail)
+POST https://localhost:7061/api/Auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Alice Johnson",
+  "email": "alice@example.com", 
+  "password": "password123",
+  "confirmPassword": "password123",
+  "gender": "Female",
+  "phoneNumber": "+1234567890",
+  "deviceToken": "fcm-token-here",
+  "abuneId": "invalid-abune-id-12345"
+}
+
+### Test Registration with duplicate email (should fail)
+POST https://localhost:7061/api/Auth/register
+Content-Type: application/json
+
+{
+  "fullName": "John Doe Duplicate",
+  "email": "john@example.com", 
+  "password": "password123",
+  "confirmPassword": "password123",
+  "gender": "Male",
+  "phoneNumber": "+1234567890",
+  "deviceToken": "fcm-token-here",
+  "abuneId": "some-abune-id-here"
+}

@@ -14,5 +14,6 @@ namespace coptic_app_backend.Domain.Interfaces
         Task<bool> RegisterDeviceTokenAsync(string userId, string deviceToken);
         Task<User?> GetUserByIdAsync(string userId);
         Task<User?> GetUserByEmailAsync(string email);
+        Task<bool> EmailExistsAsync(string email);
     }
 }

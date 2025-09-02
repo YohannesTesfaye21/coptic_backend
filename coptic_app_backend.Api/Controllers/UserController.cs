@@ -18,11 +18,13 @@ namespace coptic_app_backend.Api.Controllers
     {
         private readonly IUserService _userService;
         private readonly IUserRepository _userRepository;
+        private readonly IAbuneService _abuneService;
 
-        public UserController(IUserService userService, IUserRepository userRepository)
+        public UserController(IUserService userService, IUserRepository userRepository, IAbuneService abuneService)
         {
             _userService = userService;
             _userRepository = userRepository;
+            _abuneService = abuneService;
         }
 
         /// <summary>
@@ -233,6 +235,23 @@ namespace coptic_app_backend.Api.Controllers
                     return BadRequest("Username and email must be the same for email-based authentication");
                 }
 
+                // Check if email already exists
+                var emailExists = await _userRepository.EmailExistsAsync(request.Email);
+                if (emailExists)
+                {
+                    return BadRequest("Email already exists. Please use a different email address.");
+                }
+
+                // Check if AbuneId exists and is a valid Abune (if provided)
+                if (!string.IsNullOrEmpty(request.AbuneId))
+                {
+                    var abune = await _abuneService.GetAbuneByIdAsync(request.AbuneId);
+                    if (abune == null)
+                    {
+                        return BadRequest("Invalid AbuneId. The specified Abune does not exist.");
+                    }
+                }
+
                 var user = new User
                 {
                     Username = request.Username,
@@ -240,7 +259,8 @@ namespace coptic_app_backend.Api.Controllers
                     PhoneNumber = request.PhoneNumber,
                     Name = request.Name,
                     Gender = request.Gender,
-                    DeviceToken = request.DeviceToken
+                    DeviceToken = request.DeviceToken,
+                    AbuneId = request.AbuneId
                 };
 
                 var createdUser = await _userService.CreateUserAsync(user);
@@ -400,6 +420,7 @@ namespace coptic_app_backend.Api.Controllers
         public string? Name { get; set; }
         public string? Gender { get; set; }
         public string? DeviceToken { get; set; }
+        public string? AbuneId { get; set; }
     }
 
     public class UpdateUserRequest

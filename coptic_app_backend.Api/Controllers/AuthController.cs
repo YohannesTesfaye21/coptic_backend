@@ -17,12 +17,14 @@ namespace coptic_app_backend.Api.Controllers
         private readonly IUserService _userService;
         private readonly IUserRepository _userRepository;
         private readonly ICognitoUserService _cognitoUserService;
+        private readonly IAbuneService _abuneService;
 
-        public AuthController(IUserService userService, IUserRepository userRepository, ICognitoUserService cognitoUserService)
+        public AuthController(IUserService userService, IUserRepository userRepository, ICognitoUserService cognitoUserService, IAbuneService abuneService)
         {
             _userService = userService;
             _userRepository = userRepository;
             _cognitoUserService = cognitoUserService;
+            _abuneService = abuneService;
         }
 
         /// <summary>
@@ -82,6 +84,20 @@ namespace coptic_app_backend.Api.Controllers
                 if (string.IsNullOrEmpty(request.AbuneId))
                 {
                     return BadRequest("AbuneId is required for user registration");
+                }
+
+                // Check if email already exists
+                var emailExists = await _userRepository.EmailExistsAsync(request.Email);
+                if (emailExists)
+                {
+                    return BadRequest("Email already exists. Please use a different email address.");
+                }
+
+                // Check if AbuneId exists and is a valid Abune
+                var abune = await _abuneService.GetAbuneByIdAsync(request.AbuneId);
+                if (abune == null)
+                {
+                    return BadRequest("Invalid AbuneId. The specified Abune does not exist.");
                 }
 
                 // Create user in local database using authentication service
