@@ -273,10 +273,10 @@ namespace coptic_app_backend.Api.Controllers
             }
         }
 
-        // GET: api/Abune/{id}/pending-approvals
-        [HttpGet("{id}/pending-approvals")]
+        // GET: api/Abune/pending-approvals
+        [HttpGet("pending-approvals")]
         [Authorize(Policy = "AbuneOnly")]
-        public async Task<ActionResult<List<User>>> GetPendingApprovals(string id)
+        public async Task<ActionResult> GetPendingApprovals([FromQuery] string? userId = null)
         {
             try
             {
@@ -287,18 +287,32 @@ namespace coptic_app_backend.Api.Controllers
                     return BadRequest("Abune ID not found in token");
                 }
 
-                // Abune can only see their own pending approvals
-                if (id != currentAbuneId)
+                bool result;
+                string message;
+
+                if (!string.IsNullOrEmpty(userId))
                 {
-                    return Forbid("You can only view your own pending approvals");
+                    // Approve specific user
+                    result = await _abuneService.ApproveUserAsync(currentAbuneId, userId);
+                    message = result ? $"User {userId} approved successfully" : $"User {userId} not found in your community or already approved";
+                }
+                else
+                {
+                    // Approve all pending users
+                    result = await _abuneService.ApproveAllPendingUsersAsync(currentAbuneId);
+                    message = result ? "All pending users approved successfully" : "No pending users to approve";
                 }
 
-                var pendingUsers = await _abuneService.GetPendingApprovalsAsync(id);
-                return Ok(pendingUsers);
+                if (!result)
+                {
+                    return NotFound(new { message });
+                }
+
+                return Ok(new { message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting pending approvals for Abune: {Id}", id);
+                _logger.LogError(ex, "Error processing pending approvals for Abune, UserId: {UserId}", userId);
                 return StatusCode(500, new { error = "Internal server error", message = ex.Message });
             }
         }

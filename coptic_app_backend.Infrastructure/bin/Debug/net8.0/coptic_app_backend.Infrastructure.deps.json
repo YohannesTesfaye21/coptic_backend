@@ -8,6 +8,8 @@
     ".NETCoreApp,Version=v8.0": {
       "coptic_app_backend.Infrastructure/1.0.0": {
         "dependencies": {
+          "AWSSDK.CognitoIdentityProvider": "3.7.400.1",
+          "AWSSDK.Core": "3.7.400.1",
           "Microsoft.EntityFrameworkCore": "8.0.0",
           "Microsoft.EntityFrameworkCore.Tools": "8.0.0",
           "Microsoft.Extensions.Configuration.Abstractions": "8.0.0",
@@ -20,6 +22,25 @@
         },
         "runtime": {
           "coptic_app_backend.Infrastructure.dll": {}
+        }
+      },
+      "AWSSDK.CognitoIdentityProvider/3.7.400.1": {
+        "dependencies": {
+          "AWSSDK.Core": "3.7.400.1"
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.CognitoIdentityProvider.dll": {
+            "assemblyVersion": "3.3.0.0",
+            "fileVersion": "3.7.400.1"
+          }
+        }
+      },
+      "AWSSDK.Core/3.7.400.1": {
+        "runtime": {
+          "lib/net8.0/AWSSDK.Core.dll": {
+            "assemblyVersion": "3.3.0.0",
+            "fileVersion": "3.7.400.1"
+          }
         }
       },
       "Humanizer.Core/2.14.1": {
@@ -648,6 +669,20 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "AWSSDK.CognitoIdentityProvider/3.7.400.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-FNCCzQGiehv89E+CQbig70DByNXgeK/gtfBq5U+hpZ1ZzY+E8DWY8Cc7Q7XUXUGLJUvOGaeo2Vw8IbBtS5B2rg==",
+      "path": "awssdk.cognitoidentityprovider/3.7.400.1",
+      "hashPath": "awssdk.cognitoidentityprovider.3.7.400.1.nupkg.sha512"
+    },
+    "AWSSDK.Core/3.7.400.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-HvaBpbj4YU6ZfKVQuN1aWq/lbvGKr5Cx5NNiM+r4hrl1nQG/qzLZhA/xAuFmc04Od0hWHWosP08lDStL2PlAMA==",
+      "path": "awssdk.core/3.7.400.1",
+      "hashPath": "awssdk.core.3.7.400.1.nupkg.sha512"
     },
     "Humanizer.Core/2.14.1": {
       "type": "package",

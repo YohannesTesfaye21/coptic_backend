@@ -323,6 +323,43 @@ namespace coptic_app_backend.Infrastructure.Services
             }
         }
 
+        public async Task<bool> ApproveAllPendingUsersAsync(string abuneId)
+        {
+            try
+            {
+                var pendingUsers = await _context.Users
+                    .Where(u => u.AbuneId == abuneId && 
+                               u.UserType == UserType.Regular && 
+                               u.UserStatus == UserStatus.PendingApproval &&
+                               u.IsApproved == false)
+                    .ToListAsync();
+
+                if (!pendingUsers.Any())
+                {
+                    return false; // No users to approve
+                }
+
+                foreach (var user in pendingUsers)
+                {
+                    user.IsApproved = true;
+                    user.UserStatus = UserStatus.Active;
+                    user.ApprovedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                    user.ApprovedBy = abuneId;
+                    user.LastModified = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Approved {Count} users for Abune: {AbuneId}", pendingUsers.Count, abuneId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving all pending users for Abune: {AbuneId}", abuneId);
+                throw;
+            }
+        }
+
         public async Task<bool> ApproveUserAsync(string abuneId, string userId)
         {
             return await ApproveCommunityMemberAsync(abuneId, userId);

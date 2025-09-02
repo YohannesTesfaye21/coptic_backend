@@ -1,9 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "rK4+rSfZV1w=",
+  "dgSpecHash": "D0X94ijrayw=",
   "success": true,
   "projectFilePath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/coptic_app_backend.Api.csproj",
   "expectedPackageFiles": [
+    "/Users/m2pro/.nuget/packages/awssdk.cognitoidentityprovider/3.7.400.1/awssdk.cognitoidentityprovider.3.7.400.1.nupkg.sha512",
+    "/Users/m2pro/.nuget/packages/awssdk.core/3.7.400.1/awssdk.core.3.7.400.1.nupkg.sha512",
     "/Users/m2pro/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
     "/Users/m2pro/.nuget/packages/microsoft.aspnetcore.authentication.abstractions/2.2.0/microsoft.aspnetcore.authentication.abstractions.2.2.0.nupkg.sha512",
     "/Users/m2pro/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/8.0.0/microsoft.aspnetcore.authentication.jwtbearer.8.0.0.nupkg.sha512",

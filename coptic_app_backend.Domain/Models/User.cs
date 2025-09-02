@@ -26,6 +26,8 @@ namespace coptic_app_backend.Domain.Models
         public string? Gender { get; set; } // User gender
         public string? DeviceToken { get; set; } // FCM device token for notifications
         public string? PasswordHash { get; set; } // Hashed password for local authentication
+        public bool EmailVerified { get; set; } = false; // Whether email is verified
+        public bool PhoneNumberVerified { get; set; } = false; // Whether phone number is verified
         public long CreatedAt { get; set; } // User creation timestamp
         public long LastModified { get; set; } // Last modification timestamp
         

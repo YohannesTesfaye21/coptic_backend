@@ -24,6 +24,7 @@ namespace coptic_app_backend.Domain.Interfaces
         // User approval workflow
         Task<List<User>> GetPendingApprovalsAsync(string abuneId);
         Task<bool> ApproveUserAsync(string abuneId, string userId);
+        Task<bool> ApproveAllPendingUsersAsync(string abuneId);
         Task<bool> RejectUserAsync(string abuneId, string userId, string reason);
         
         // Statistics

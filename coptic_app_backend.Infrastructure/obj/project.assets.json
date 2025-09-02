@@ -2,6 +2,35 @@
   "version": 3,
   "targets": {
     "net8.0": {
+      "AWSSDK.CognitoIdentityProvider/3.7.400.1": {
+        "type": "package",
+        "dependencies": {
+          "AWSSDK.Core": "[3.7.400.1, 4.0.0)"
+        },
+        "compile": {
+          "lib/net8.0/AWSSDK.CognitoIdentityProvider.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.CognitoIdentityProvider.dll": {
+            "related": ".pdb;.xml"
+          }
+        }
+      },
+      "AWSSDK.Core/3.7.400.1": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/AWSSDK.Core.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.Core.dll": {
+            "related": ".pdb;.xml"
+          }
+        }
+      },
       "Humanizer.Core/2.14.1": {
         "type": "package",
         "compile": {
@@ -999,6 +1028,67 @@
     }
   },
   "libraries": {
+    "AWSSDK.CognitoIdentityProvider/3.7.400.1": {
+      "sha512": "FNCCzQGiehv89E+CQbig70DByNXgeK/gtfBq5U+hpZ1ZzY+E8DWY8Cc7Q7XUXUGLJUvOGaeo2Vw8IbBtS5B2rg==",
+      "type": "package",
+      "path": "awssdk.cognitoidentityprovider/3.7.400.1",
+      "hasTools": true,
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "analyzers/dotnet/cs/AWSSDK.CognitoIdentityProvider.CodeAnalysis.dll",
+        "analyzers/dotnet/cs/SharedAnalysisCode.dll",
+        "awssdk.cognitoidentityprovider.3.7.400.1.nupkg.sha512",
+        "awssdk.cognitoidentityprovider.nuspec",
+        "images/AWSLogo.png",
+        "lib/net35/AWSSDK.CognitoIdentityProvider.dll",
+        "lib/net35/AWSSDK.CognitoIdentityProvider.pdb",
+        "lib/net35/AWSSDK.CognitoIdentityProvider.xml",
+        "lib/net45/AWSSDK.CognitoIdentityProvider.dll",
+        "lib/net45/AWSSDK.CognitoIdentityProvider.pdb",
+        "lib/net45/AWSSDK.CognitoIdentityProvider.xml",
+        "lib/net8.0/AWSSDK.CognitoIdentityProvider.dll",
+        "lib/net8.0/AWSSDK.CognitoIdentityProvider.pdb",
+        "lib/net8.0/AWSSDK.CognitoIdentityProvider.xml",
+        "lib/netcoreapp3.1/AWSSDK.CognitoIdentityProvider.dll",
+        "lib/netcoreapp3.1/AWSSDK.CognitoIdentityProvider.pdb",
+        "lib/netcoreapp3.1/AWSSDK.CognitoIdentityProvider.xml",
+        "lib/netstandard2.0/AWSSDK.CognitoIdentityProvider.dll",
+        "lib/netstandard2.0/AWSSDK.CognitoIdentityProvider.pdb",
+        "lib/netstandard2.0/AWSSDK.CognitoIdentityProvider.xml",
+        "tools/install.ps1",
+        "tools/uninstall.ps1"
+      ]
+    },
+    "AWSSDK.Core/3.7.400.1": {
+      "sha512": "HvaBpbj4YU6ZfKVQuN1aWq/lbvGKr5Cx5NNiM+r4hrl1nQG/qzLZhA/xAuFmc04Od0hWHWosP08lDStL2PlAMA==",
+      "type": "package",
+      "path": "awssdk.core/3.7.400.1",
+      "hasTools": true,
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "awssdk.core.3.7.400.1.nupkg.sha512",
+        "awssdk.core.nuspec",
+        "images/AWSLogo.png",
+        "lib/net35/AWSSDK.Core.dll",
+        "lib/net35/AWSSDK.Core.pdb",
+        "lib/net35/AWSSDK.Core.xml",
+        "lib/net45/AWSSDK.Core.dll",
+        "lib/net45/AWSSDK.Core.pdb",
+        "lib/net45/AWSSDK.Core.xml",
+        "lib/net8.0/AWSSDK.Core.dll",
+        "lib/net8.0/AWSSDK.Core.pdb",
+        "lib/net8.0/AWSSDK.Core.xml",
+        "lib/netcoreapp3.1/AWSSDK.Core.dll",
+        "lib/netcoreapp3.1/AWSSDK.Core.pdb",
+        "lib/netcoreapp3.1/AWSSDK.Core.xml",
+        "lib/netstandard2.0/AWSSDK.Core.dll",
+        "lib/netstandard2.0/AWSSDK.Core.pdb",
+        "lib/netstandard2.0/AWSSDK.Core.xml",
+        "tools/account-management.ps1"
+      ]
+    },
     "Humanizer.Core/2.14.1": {
       "sha512": "lQKvtaTDOXnoVJ20ibTuSIOf2i0uO0MPbDhd1jm238I+U/2ZnRENj0cktKZhtchBMtCUSRQ5v4xBCUbKNmyVMw==",
       "type": "package",
@@ -2600,6 +2690,8 @@
   },
   "projectFileDependencyGroups": {
     "net8.0": [
+      "AWSSDK.CognitoIdentityProvider >= 3.7.400.1",
+      "AWSSDK.Core >= 3.7.400.1",
       "Microsoft.EntityFrameworkCore >= 8.0.0",
       "Microsoft.EntityFrameworkCore.Tools >= 8.0.0",
       "Microsoft.Extensions.Configuration.Abstractions >= 8.0.0",
@@ -2623,7 +2715,6 @@
       "packagesPath": "/Users/m2pro/.nuget/packages/",
       "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/",
       "projectStyle": "PackageReference",
-      "UsingMicrosoftNETSdk": false,
       "configFilePaths": [
         "/Users/m2pro/.nuget/NuGet/NuGet.Config"
       ],
@@ -2658,6 +2749,14 @@
       "net8.0": {
         "targetAlias": "net8.0",
         "dependencies": {
+          "AWSSDK.CognitoIdentityProvider": {
+            "target": "Package",
+            "version": "[3.7.400.1, )"
+          },
+          "AWSSDK.Core": {
+            "target": "Package",
+            "version": "[3.7.400.1, )"
+          },
           "Microsoft.EntityFrameworkCore": {
             "target": "Package",
             "version": "[8.0.0, )"

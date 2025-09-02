@@ -128,6 +128,7 @@ namespace coptic_app_backend.Infrastructure.Repositories
                 existingUser.Gender = user.Gender ?? existingUser.Gender;
                 existingUser.DeviceToken = user.DeviceToken ?? existingUser.DeviceToken;
                 existingUser.PasswordHash = user.PasswordHash ?? existingUser.PasswordHash;
+                existingUser.EmailVerified = user.EmailVerified;
                 existingUser.LastModified = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
                 await _context.SaveChangesAsync();
@@ -159,6 +160,7 @@ namespace coptic_app_backend.Infrastructure.Repositories
                     existingUser.Gender = user.Gender ?? existingUser.Gender;
                     existingUser.DeviceToken = user.DeviceToken ?? existingUser.DeviceToken;
                     existingUser.PasswordHash = user.PasswordHash ?? existingUser.PasswordHash;
+                    existingUser.EmailVerified = user.EmailVerified;
                     existingUser.LastModified = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
                     await _context.SaveChangesAsync();

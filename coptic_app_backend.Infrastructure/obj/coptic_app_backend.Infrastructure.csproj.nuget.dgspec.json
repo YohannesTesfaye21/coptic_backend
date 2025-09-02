@@ -13,7 +13,6 @@
         "packagesPath": "/Users/m2pro/.nuget/packages/",
         "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/",
         "projectStyle": "PackageReference",
-        "UsingMicrosoftNETSdk": false,
         "configFilePaths": [
           "/Users/m2pro/.nuget/NuGet/NuGet.Config"
         ],
@@ -72,7 +71,6 @@
         "packagesPath": "/Users/m2pro/.nuget/packages/",
         "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/",
         "projectStyle": "PackageReference",
-        "UsingMicrosoftNETSdk": false,
         "configFilePaths": [
           "/Users/m2pro/.nuget/NuGet/NuGet.Config"
         ],
@@ -107,6 +105,14 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "AWSSDK.CognitoIdentityProvider": {
+              "target": "Package",
+              "version": "[3.7.400.1, )"
+            },
+            "AWSSDK.Core": {
+              "target": "Package",
+              "version": "[3.7.400.1, )"
+            },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
               "version": "[8.0.0, )"
