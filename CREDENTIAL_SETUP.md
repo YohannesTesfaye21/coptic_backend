@@ -17,7 +17,7 @@ This guide explains how to properly configure AWS Cognito and database credentia
 2. Open `local.env` and replace all placeholder values with your actual credentials:
    ```bash
    # AWS Configuration
-   AWS_ACCESS_KEY_ID=AKIATNU7RUUORIMC2XVL
+   AWS_ACCESS_KEY_ID=your_aws_access_key_here
    AWS_SECRET_ACCESS_KEY=your_actual_secret_key
    AWS_REGION=eu-north-1
    
