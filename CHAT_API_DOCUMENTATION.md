@@ -242,6 +242,11 @@ GET /api/Chat/conversations
 GET /api/Chat/conversations/{otherUserId}/messages?limit=50&beforeTimestamp=1756908352
 ```
 
+### Important Note
+- `{otherUserId}` should be the **User ID** of the other participant in the conversation, NOT the conversation ID
+- For Regular users: use the **Abune ID** as the `otherUserId`
+- For Abune users: use the **Regular User ID** as the `otherUserId`
+
 ### Query Parameters
 - `limit`: Number of messages to retrieve (default: 50)
 - `beforeTimestamp`: Get messages before this timestamp (for pagination)
@@ -778,6 +783,51 @@ try {
 
 ---
 
+## Troubleshooting
+
+### Common Issues
+
+#### 1. 500 Error when getting conversation messages
+**Problem**: `GET /api/Chat/conversations/{conversationId}/messages` returns 500 error
+**Solution**: Use the **User ID** of the other participant, not the conversation ID
+- ❌ Wrong: `/api/Chat/conversations/3cd26364-195c-4e63-ad79-e6116bf81248/messages` (conversation ID)
+- ✅ Correct: `/api/Chat/conversations/96adbd2a-c124-4061-8897-0f9c9eb0e1df/messages` (Abune ID)
+
+#### 2. 403 Forbidden errors
+**Problem**: "Users are not in the same community" error
+**Solution**: Ensure the user is properly approved and belongs to the correct Abune community
+
+#### 3. Missing /api prefix
+**Problem**: Flutter app calling `/Chat/conversations` instead of `/api/Chat/conversations`
+**Solution**: Always include the `/api` prefix in the base URL
+
+### Flutter Integration Tips
+
+1. **Base URL Configuration**:
+   ```dart
+   static const String baseUrl = 'http://162.243.165.212:5000/api';
+   ```
+
+2. **Getting the correct otherUserId**:
+   ```dart
+   // From conversation object, use the abuneId for regular users
+   String otherUserId = conversation.abuneId; // For regular users
+   // OR use the userId for abune users
+   String otherUserId = conversation.userId; // For abune users
+   ```
+
+3. **Error Handling**:
+   ```dart
+   try {
+     final messages = await chatApiService.getConversationMessages(otherUserId);
+   } catch (e) {
+     if (e.toString().contains('500')) {
+       // Check if you're using conversation ID instead of user ID
+       print('Error: Make sure you\'re using the correct user ID, not conversation ID');
+     }
+   }
+   ```
+
 ## Testing
 Use the provided endpoints with tools like Postman or curl to test the API before Flutter integration.
 
@@ -791,4 +841,10 @@ curl -X POST "http://162.243.165.212:5000/api/Chat/send" \
     "content": "Hello, this is a test message",
     "messageType": 0
   }'
+```
+
+Example for getting conversation messages:
+```bash
+curl -X GET "http://162.243.165.212:5000/api/Chat/conversations/96adbd2a-c124-4061-8897-0f9c9eb0e1df/messages?limit=50" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
