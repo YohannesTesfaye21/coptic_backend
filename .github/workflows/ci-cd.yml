@@ -140,6 +140,12 @@ jobs:
           echo "📋 Setting up environment..."
           if [ -f "env.production" ]; then
             cp env.production .env
+            # Substitute environment variables from GitHub Secrets
+            sed -i "s/\${AWS_ACCESS_KEY_ID}/${{ secrets.AWS_ACCESS_KEY_ID }}/g" .env
+            sed -i "s/\${AWS_SECRET_ACCESS_KEY}/${{ secrets.AWS_SECRET_ACCESS_KEY }}/g" .env
+            sed -i "s/\${AWS_REGION}/${{ secrets.AWS_REGION }}/g" .env
+            sed -i "s/\${COGNITO_USER_POOL_ID}/${{ secrets.COGNITO_USER_POOL_ID }}/g" .env
+            sed -i "s/\${COGNITO_CLIENT_ID}/${{ secrets.COGNITO_CLIENT_ID }}/g" .env
           else
             echo "⚠️  env.production not found, creating basic .env"
             echo "# Database Configuration" > .env
@@ -158,6 +164,13 @@ jobs:
             echo "" >> .env
             echo "# Application Configuration" >> .env
             echo "ASPNETCORE_ENVIRONMENT=Production" >> .env
+            echo "" >> .env
+            echo "# AWS Cognito Configuration" >> .env
+            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
+            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
+            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+            echo "COGNITO_USER_POOL_ID=${{ secrets.COGNITO_USER_POOL_ID }}" >> .env
+            echo "COGNITO_CLIENT_ID=${{ secrets.COGNITO_CLIENT_ID }}" >> .env
           fi
           
           # Pull latest changes if git repo exists
