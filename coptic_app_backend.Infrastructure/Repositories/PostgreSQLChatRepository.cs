@@ -209,12 +209,26 @@ namespace coptic_app_backend.Infrastructure.Repositories
 
         public async Task<List<ChatConversation>> GetUserConversationsAsync(string userId, string abuneId)
         {
-            return await _context.ChatConversations
-                .Where(c => c.AbuneId == abuneId && 
-                           c.IsActive &&
-                           c.UserId == userId)
-                .OrderByDescending(c => c.LastMessageAt)
-                .ToListAsync();
+            // For Abune users, get all conversations with their community members
+            // For Regular users, get their conversation with their Abune
+            if (userId == abuneId)
+            {
+                // This is an Abune - get all conversations with their community members
+                return await _context.ChatConversations
+                    .Where(c => c.AbuneId == abuneId && c.IsActive)
+                    .OrderByDescending(c => c.LastMessageAt)
+                    .ToListAsync();
+            }
+            else
+            {
+                // This is a Regular user - get their conversation with their Abune
+                return await _context.ChatConversations
+                    .Where(c => c.AbuneId == abuneId && 
+                               c.IsActive &&
+                               c.UserId == userId)
+                    .OrderByDescending(c => c.LastMessageAt)
+                    .ToListAsync();
+            }
         }
 
         public async Task<bool> UpdateConversationAsync(ChatConversation conversation)

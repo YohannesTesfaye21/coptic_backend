@@ -129,7 +129,7 @@ namespace coptic_app_backend.Api.Migrations
 
                     b.HasIndex("Timestamp");
 
-                    b.ToTable("ChatMessages");
+                    b.ToTable("ChatMessages", (string)null);
                 });
 
             modelBuilder.Entity("coptic_app_backend.Domain.Models.User", b =>
@@ -240,7 +240,7 @@ namespace coptic_app_backend.Api.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("coptic_app_backend.Domain.Models.User", b =>
