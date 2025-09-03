@@ -212,7 +212,7 @@ namespace coptic_app_backend.Infrastructure.Repositories
 
         public async Task<List<ChatConversation>> GetUserConversationsAsync(string userId, string abuneId)
         {
-            // For Abune users, get all conversations with their community members
+voic            // For Abune users, get all conversations with their community members
             // For Regular users, get their conversation with their Abune
             if (userId == abuneId)
             {
@@ -264,12 +264,34 @@ namespace coptic_app_backend.Infrastructure.Repositories
             var conversation = await _context.ChatConversations.FindAsync(conversationId);
             if (conversation == null) return 0;
 
-            return await _context.ChatMessages
-                .CountAsync(m => !m.IsDeleted && 
-                               m.RecipientId == userId &&
-                               m.AbuneId == conversation.AbuneId &&
-                               m.SenderId == conversation.AbuneId &&
-                               !m.ReadStatus.Contains(userId));
+            // Get all messages in this conversation
+            var messages = await _context.ChatMessages
+                .Where(m => !m.IsDeleted && 
+                           m.RecipientId == userId &&
+                           m.AbuneId == conversation.AbuneId &&
+                           m.SenderId == conversation.AbuneId)
+                .ToListAsync();
+
+            // Count messages that don't have this user in their ReadStatus
+            int unreadCount = 0;
+            foreach (var message in messages)
+            {
+                try
+                {
+                    var readStatus = JsonSerializer.Deserialize<Dictionary<string, MessageReadStatus>>(message.ReadStatus) ?? new Dictionary<string, MessageReadStatus>();
+                    if (!readStatus.ContainsKey(userId))
+                    {
+                        unreadCount++;
+                    }
+                }
+                catch
+                {
+                    // If ReadStatus is invalid JSON, consider it unread
+                    unreadCount++;
+                }
+            }
+
+            return unreadCount;
         }
 
         public async Task<Dictionary<string, int>> GetUnreadCountsForUserAsync(string userId, string abuneId)
