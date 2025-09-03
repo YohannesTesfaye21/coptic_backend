@@ -118,16 +118,23 @@ namespace coptic_app_backend.Infrastructure.Repositories
             {
                 var readStatus = JsonSerializer.Deserialize<Dictionary<string, MessageReadStatus>>(message.ReadStatus) ?? new Dictionary<string, MessageReadStatus>();
                 
-                readStatus[userId] = new MessageReadStatus
+                // Only update if this user hasn't read the message yet
+                if (!readStatus.ContainsKey(userId))
                 {
-                    UserId = userId,
-                    ReadAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                };
+                    readStatus[userId] = new MessageReadStatus
+                    {
+                        UserId = userId,
+                        ReadAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                    };
 
-                message.ReadStatus = JsonSerializer.Serialize(readStatus);
-                message.Status = MessageStatus.Read;
+                    message.ReadStatus = JsonSerializer.Serialize(readStatus);
+                    message.Status = MessageStatus.Read;
 
-                await _context.SaveChangesAsync();
+                    // Update conversation unread count
+                    await UpdateConversationUnreadCountAsync(message.AbuneId, message.RecipientId);
+
+                    await _context.SaveChangesAsync();
+                }
                 return true;
             }
             catch
@@ -371,6 +378,19 @@ voic            // For Abune users, get all conversations with their community m
         #endregion
 
         #region Private Methods
+
+        private async Task UpdateConversationUnreadCountAsync(string abuneId, string userId)
+        {
+            var conversation = await GetConversationAsync(abuneId, userId, abuneId);
+            if (conversation != null)
+            {
+                // Recalculate unread count
+                var actualUnreadCount = await GetUnreadCountAsync(userId, conversation.Id);
+                conversation.UnreadCount = actualUnreadCount;
+                conversation.UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                await UpdateConversationAsync(conversation);
+            }
+        }
 
         private async Task UpdateConversationLastMessageAsync(ChatMessage message)
         {
