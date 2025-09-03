@@ -138,8 +138,9 @@ jobs:
           
           # Copy environment file
           echo "📋 Setting up environment..."
-          if [ -f "env.production" ]; then
-            cp env.production .env
+          if [ -f "$HOME/coptic-app-backend/env.production" ]; then
+            cp $HOME/coptic-app-backend/env.production .env
+            echo "✅ Using env.production template"
             # Substitute environment variables from GitHub Secrets
             sed -i "s/\${AWS_ACCESS_KEY_ID}/${{ secrets.AWS_ACCESS_KEY_ID }}/g" .env
             sed -i "s/\${AWS_SECRET_ACCESS_KEY}/${{ secrets.AWS_SECRET_ACCESS_KEY }}/g" .env
