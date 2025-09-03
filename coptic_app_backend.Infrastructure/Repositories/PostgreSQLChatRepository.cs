@@ -219,7 +219,7 @@ namespace coptic_app_backend.Infrastructure.Repositories
 
         public async Task<List<ChatConversation>> GetUserConversationsAsync(string userId, string abuneId)
         {
-voic            // For Abune users, get all conversations with their community members
+            // For Abune users, get all conversations with their community members
             // For Regular users, get their conversation with their Abune
             if (userId == abuneId)
             {
