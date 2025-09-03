@@ -23,6 +23,8 @@ namespace coptic_app_backend.Domain.Interfaces
         public string? ErrorMessage { get; set; }
         public string? UserId { get; set; }
         public string? CognitoSub { get; set; }
+        public string? Message { get; set; }
+        public bool RequiresEmailVerification { get; set; }
     }
 
     public class CognitoAuthResult : CognitoResult

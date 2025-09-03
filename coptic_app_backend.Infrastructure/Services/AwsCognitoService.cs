@@ -38,16 +38,21 @@ namespace coptic_app_backend.Infrastructure.Services
             // Validate required configuration
             if (string.IsNullOrEmpty(accessKeyId) || string.IsNullOrEmpty(secretAccessKey))
             {
+                _logger.LogError("AWS credentials not found. AWS_ACCESS_KEY_ID: {HasAccessKey}, AWS_SECRET_ACCESS_KEY: {HasSecretKey}", 
+                    !string.IsNullOrEmpty(accessKeyId) ? "SET" : "MISSING", 
+                    !string.IsNullOrEmpty(secretAccessKey) ? "SET" : "MISSING");
                 throw new InvalidOperationException("AWS credentials are not configured properly. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.");
             }
 
             if (string.IsNullOrEmpty(_userPoolId))
             {
+                _logger.LogError("Cognito User Pool ID not found. Please check COGNITO_USER_POOL_ID environment variable.");
                 throw new InvalidOperationException("Cognito User Pool ID is not configured. Please set COGNITO_USER_POOL_ID environment variable.");
             }
 
             if (string.IsNullOrEmpty(_clientId))
             {
+                _logger.LogError("Cognito Client ID not found. Please check COGNITO_CLIENT_ID environment variable.");
                 throw new InvalidOperationException("Cognito Client ID is not configured. Please set COGNITO_CLIENT_ID environment variable.");
             }
 
@@ -61,9 +66,15 @@ namespace coptic_app_backend.Infrastructure.Services
 
         public async Task<CognitoResult> RegisterUserAsync(string email, string password, string? name, string? phoneNumber, string? deviceToken = null, string? abuneId = null)
         {
+            User? createdUser = null;
+            bool cognitoSuccess = false;
+            string? cognitoSub = null;
+
             try
             {
-                // Register user in Cognito first
+                _logger.LogInformation("Attempting to register user in Cognito: {Email}", email);
+
+                // Try Cognito registration first
                 var signUpRequest = new SignUpRequest
                 {
                     ClientId = _clientId,
@@ -83,8 +94,20 @@ namespace coptic_app_backend.Infrastructure.Services
                 }
 
                 var signUpResponse = await _cognitoClient.SignUpAsync(signUpRequest);
+                cognitoSuccess = true;
+                cognitoSub = signUpResponse.UserSub;
+                
+                _logger.LogInformation("Cognito registration successful for {Email}. UserSub: {UserSub}", email, cognitoSub);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cognito registration failed for {Email}, but continuing with local registration: {ErrorMessage}", email, ex.Message);
+                cognitoSuccess = false;
+            }
 
-                // Only proceed with local database if Cognito registration is successful
+            try
+            {
+                // Always save to local database, regardless of Cognito status
                 var user = new User
                 {
                     Id = Guid.NewGuid().ToString(),
@@ -96,26 +119,45 @@ namespace coptic_app_backend.Infrastructure.Services
                     UserType = Domain.Models.UserType.Regular,
                     UserStatus = UserStatus.PendingApproval,
                     AbuneId = abuneId,
-                    EmailVerified = false,
+                    EmailVerified = false, // Will be set to true when Cognito email is verified or manually approved
                     PhoneNumberVerified = false,
                     CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                     LastModified = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                 };
 
-                var createdUser = await _userRepository.CreateUserAsync(user);
+                createdUser = await _userRepository.CreateUserAsync(user);
 
-                _logger.LogInformation("User registered successfully in both Cognito and local database: {Email}", email);
+                if (cognitoSuccess)
+                {
+                    _logger.LogInformation("User registered successfully in both Cognito and local database: {Email}", email);
+                }
+                else
+                {
+                    _logger.LogInformation("User registered successfully in local database only (Cognito unavailable): {Email}", email);
+                }
+
                 return new CognitoResult 
                 { 
                     IsSuccess = true, 
                     UserId = createdUser.Id,
-                    CognitoSub = signUpResponse.UserSub
+                    CognitoSub = cognitoSub,
+                    RequiresEmailVerification = cognitoSuccess, // Only require email verification if Cognito worked
+                    Message = cognitoSuccess 
+                        ? "User registered successfully. Please check your email for verification code."
+                        : "User registered successfully. Email verification unavailable - please wait for Abune approval."
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error registering user in Cognito: {Email}", email);
-                return new CognitoResult { IsSuccess = false, ErrorMessage = ex.Message };
+                _logger.LogError(ex, "Error saving user to local database: {Email}", email);
+                
+                // If local DB fails but Cognito succeeded, we should ideally clean up Cognito user
+                // but for now, just return the error
+                return new CognitoResult 
+                { 
+                    IsSuccess = false, 
+                    ErrorMessage = $"Failed to save user to database: {ex.Message}" 
+                };
             }
         }
 
