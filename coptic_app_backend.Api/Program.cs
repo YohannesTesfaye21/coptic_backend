@@ -129,12 +129,12 @@ builder.Services.AddHttpClient();
             builder.Services.AddScoped<IChatRepository, PostgreSQLChatRepository>();
             builder.Services.AddScoped<IUserRepository, PostgreSQLUserRepository>();
             
-            // Configure SimpleAuthService with JWT settings
+            // Configure AwsCognitoService with JWT settings
             builder.Services.AddScoped<ICognitoUserService>(provider => 
             {
                 var configuration = provider.GetRequiredService<IConfiguration>();
-                var logger = provider.GetRequiredService<ILogger<SimpleAuthService>>();
-                return new SimpleAuthService(
+                var logger = provider.GetRequiredService<ILogger<AwsCognitoService>>();
+                return new AwsCognitoService(
                     provider.GetRequiredService<IUserRepository>(),
                     configuration,
                     logger
