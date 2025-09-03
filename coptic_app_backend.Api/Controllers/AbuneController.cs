@@ -31,6 +31,33 @@ namespace coptic_app_backend.Api.Controllers
             _logger = logger;
         }
 
+        // GET: api/Abune/all (Public endpoint for registration)
+        [HttpGet("all")]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<object>>> GetAllAbunesPublic()
+        {
+            try
+            {
+                var abunes = await _abuneService.GetAllAbunesAsync();
+                
+                // Return only essential information for registration
+                var publicAbunes = abunes.Select(abune => new
+                {
+                    id = abune.Id,
+                    name = abune.Name,
+                    churchName = abune.ChurchName,
+                    location = abune.Location
+                }).ToList();
+
+                return Ok(publicAbunes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving public Abunes list");
+                return StatusCode(500, new { error = "Internal server error", message = "Failed to retrieve Abunes list" });
+            }
+        }
+
         // GET: api/Abune
         [HttpGet]
         [AbuneAccess]
