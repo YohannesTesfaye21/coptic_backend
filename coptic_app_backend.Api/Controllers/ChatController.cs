@@ -54,7 +54,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -96,7 +96,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -138,7 +138,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -180,7 +180,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -218,7 +218,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -252,7 +252,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -287,7 +287,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -321,7 +321,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -355,7 +355,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -388,7 +388,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -447,7 +447,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -483,7 +483,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -515,7 +515,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -556,7 +556,7 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
             }
             catch (Exception ex)
             {
