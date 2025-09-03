@@ -71,7 +71,7 @@ namespace coptic_app_backend.Application.Services
         {
             // Validate that sender is an Abune
             var sender = await _userRepository.GetUserByIdAsync(senderId);
-            if (sender?.UserType != UserType.Abune || sender.AbuneId != abuneId)
+            if (sender?.UserType != UserType.Abune || sender.Id != abuneId)
             {
                 throw new UnauthorizedAccessException("Only Abune users can send broadcast messages");
             }
@@ -94,7 +94,7 @@ namespace coptic_app_backend.Application.Services
         {
             // Validate that sender is an Abune
             var sender = await _userRepository.GetUserByIdAsync(senderId);
-            if (sender?.UserType != UserType.Abune || sender.AbuneId != abuneId)
+            if (sender?.UserType != UserType.Abune || sender.Id != abuneId)
             {
                 throw new UnauthorizedAccessException("Only Abune users can send broadcast messages");
             }
