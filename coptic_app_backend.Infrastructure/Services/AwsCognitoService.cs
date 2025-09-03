@@ -69,62 +69,55 @@ namespace coptic_app_backend.Infrastructure.Services
 
         public async Task<CognitoResult> RegisterUserAsync(string email, string password, string? name, string? phoneNumber, string? deviceToken = null, string? abuneId = null)
         {
-            bool cognitoSuccess = false;
-            string? cognitoSub = null;
-
-            // Try Cognito registration first (if available)
-            if (_cognitoClient != null)
-            {
-                try
-                {
-                    _logger.LogInformation("Attempting to register user in Cognito: {Email}", email);
-
-                    var signUpRequest = new SignUpRequest
-                    {
-                        ClientId = _clientId,
-                        Username = email,
-                        Password = password,
-                        UserAttributes = new List<AttributeType>
-                        {
-                            new AttributeType { Name = "email", Value = email },
-                            new AttributeType { Name = "name", Value = name ?? "" }
-                        }
-                    };
-
-                    if (!string.IsNullOrEmpty(phoneNumber))
-                    {
-                        var formattedPhone = FormatPhoneNumberForCognito(phoneNumber);
-                        signUpRequest.UserAttributes.Add(new AttributeType { Name = "phone_number", Value = formattedPhone });
-                    }
-
-                    var signUpResponse = await _cognitoClient.SignUpAsync(signUpRequest);
-                    cognitoSub = signUpResponse.UserSub;
-                    cognitoSuccess = true;
-
-                    _logger.LogInformation("Cognito registration successful for {Email}. UserSub: {UserSub}, CodeDeliveryDetails: {CodeDeliveryDetails}", 
-                        email, signUpResponse.UserSub, signUpResponse.CodeDeliveryDetails?.Destination);
-
-                    // Validate that Cognito actually sent the verification email
-                    if (signUpResponse.CodeDeliveryDetails == null)
-                    {
-                        _logger.LogWarning("Cognito registration succeeded but no verification email was sent for {Email}", email);
-                        cognitoSuccess = false; // Treat as failed for email verification purposes
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Cognito registration failed for {Email}, will proceed with local-only registration: {ErrorMessage}", email, ex.Message);
-                    cognitoSuccess = false;
-                }
-            }
-            else
-            {
-                _logger.LogInformation("Cognito client not available, registering user locally only: {Email}", email);
-            }
-
-            // Always save to local database
             try
             {
+                // Check if Cognito is properly configured
+                if (_cognitoClient == null)
+                {
+                    _logger.LogError("Cannot register user - AWS Cognito is not properly configured. Email: {Email}", email);
+                    return new CognitoResult 
+                    { 
+                        IsSuccess = false, 
+                        ErrorMessage = "Email verification service is unavailable. Please contact support." 
+                    };
+                }
+
+                // Register user in Cognito first - THIS IS REQUIRED
+                var signUpRequest = new SignUpRequest
+                {
+                    ClientId = _clientId,
+                    Username = email,
+                    Password = password,
+                    UserAttributes = new List<AttributeType>
+                    {
+                        new AttributeType { Name = "email", Value = email },
+                        new AttributeType { Name = "name", Value = name ?? "" }
+                    }
+                };
+
+                if (!string.IsNullOrEmpty(phoneNumber))
+                {
+                    var formattedPhone = FormatPhoneNumberForCognito(phoneNumber);
+                    signUpRequest.UserAttributes.Add(new AttributeType { Name = "phone_number", Value = formattedPhone });
+                }
+
+                var signUpResponse = await _cognitoClient.SignUpAsync(signUpRequest);
+
+                _logger.LogInformation("Cognito registration successful for {Email}. UserSub: {UserSub}, CodeDeliveryDetails: {CodeDeliveryDetails}", 
+                    email, signUpResponse.UserSub, signUpResponse.CodeDeliveryDetails?.Destination);
+
+                // Validate that Cognito actually sent the verification email
+                if (signUpResponse.CodeDeliveryDetails == null)
+                {
+                    _logger.LogError("Cognito registration succeeded but no verification email was sent for {Email}", email);
+                    return new CognitoResult 
+                    { 
+                        IsSuccess = false, 
+                        ErrorMessage = "Registration succeeded but email verification failed. Please contact support." 
+                    };
+                }
+
+                // Only proceed with local database if Cognito registration is successful
                 var user = new User
                 {
                     Id = Guid.NewGuid().ToString(),
@@ -136,7 +129,7 @@ namespace coptic_app_backend.Infrastructure.Services
                     UserType = Domain.Models.UserType.Regular,
                     UserStatus = UserStatus.PendingApproval,
                     AbuneId = abuneId,
-                    EmailVerified = false, // Will be updated when email is verified
+                    EmailVerified = false, // Will be set to true when user confirms email
                     PhoneNumberVerified = false,
                     CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                     LastModified = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
@@ -144,26 +137,20 @@ namespace coptic_app_backend.Infrastructure.Services
 
                 var createdUser = await _userRepository.CreateUserAsync(user);
 
-                var message = cognitoSuccess 
-                    ? "User registered successfully. Please check your email for verification code."
-                    : "User registered successfully. Email verification unavailable - please wait for Abune approval.";
-
-                _logger.LogInformation("User registered successfully. Cognito: {CognitoSuccess}, Local DB: Success, Email: {Email}", 
-                    cognitoSuccess ? "Success" : "Failed/Unavailable", email);
-
+                _logger.LogInformation("User registered successfully in both Cognito and local database: {Email}", email);
                 return new CognitoResult 
                 { 
                     IsSuccess = true, 
                     UserId = createdUser.Id,
-                    CognitoSub = cognitoSub,
-                    RequiresEmailVerification = cognitoSuccess,
-                    Message = message
+                    CognitoSub = signUpResponse.UserSub,
+                    RequiresEmailVerification = true,
+                    Message = "User registered successfully. Please check your email for verification code."
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving user to local database: {Email}", email);
-                return new CognitoResult { IsSuccess = false, ErrorMessage = $"Failed to save user to database: {ex.Message}" };
+                _logger.LogError(ex, "Error registering user in Cognito: {Email}", email);
+                return new CognitoResult { IsSuccess = false, ErrorMessage = ex.Message };
             }
         }
 
