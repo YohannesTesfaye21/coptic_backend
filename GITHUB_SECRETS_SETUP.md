@@ -1,69 +1,76 @@
-# GitHub Secrets Setup Guide
+# GitHub Secrets Setup for AWS Cognito
 
-This guide explains how to set up GitHub secrets for the Coptic App Backend to securely store sensitive configuration data.
+To automatically deploy AWS Cognito credentials without exposing them in your code, you need to set up GitHub Secrets.
 
 ## Required GitHub Secrets
 
-Go to your GitHub repository → Settings → Secrets and variables → Actions → New repository secret
+Go to your GitHub repository → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
 
-### AWS Configuration
-- **Name**: `AWS_ACCESS_KEY_ID`
-- **Value**: `YOUR_AWS_ACCESS_KEY_ID_HERE`
+Add these 5 secrets:
 
-- **Name**: `AWS_SECRET_ACCESS_KEY`
-- **Value**: `YOUR_AWS_SECRET_ACCESS_KEY_HERE`
-
-- **Name**: `AWS_REGION`
-- **Value**: `eu-north-1`
-
-### Cognito Configuration
-- **Name**: `COGNITO_USER_POOL_ID`
-- **Value**: `YOUR_COGNITO_USER_POOL_ID_HERE`
-
-- **Name**: `COGNITO_CLIENT_ID`
-- **Value**: `YOUR_COGNITO_CLIENT_ID_HERE`
-
-- **Name**: `COGNITO_CLIENT_SECRET`
-- **Value**: (leave empty if not used)
-
-### Database Configuration
-- **Name**: `CONNECTION_STRING`
-- **Value**: `Host=162.243.165.212;Port=5432;Database=coptic_app;Username=coptic_user;Password=your_secure_password_here;SSL Mode=Prefer;Trust Server Certificate=true`
-
-### JWT Configuration
-- **Name**: `JWT_KEY`
-- **Value**: `this-is-a-very-long-secret-key-for-jwt-signing-that-is-at-least-64-characters-long-for-security`
-
-## Local Development Setup
-
-For local development, you can either:
-
-### Option 1: Set Environment Variables
-```bash
-export AWS_ACCESS_KEY_ID="YOUR_AWS_ACCESS_KEY_ID_HERE"
-export AWS_SECRET_ACCESS_KEY="YOUR_AWS_SECRET_ACCESS_KEY_HERE"
-export AWS_REGION="eu-north-1"
-export COGNITO_USER_POOL_ID="YOUR_COGNITO_USER_POOL_ID_HERE"
-export COGNITO_CLIENT_ID="YOUR_COGNITO_CLIENT_ID_HERE"
+### 1. AWS_ACCESS_KEY_ID
+```
+[Your AWS Access Key ID from local.env]
 ```
 
-### Option 2: Use appsettings.Development.json
-Add the credentials back to `appsettings.Development.json` for local development only (this file should be in .gitignore).
+### 2. AWS_SECRET_ACCESS_KEY
+```
+[Your AWS Secret Access Key from local.env]
+```
+
+### 3. AWS_REGION
+```
+eu-north-1
+```
+
+### 4. COGNITO_USER_POOL_ID
+```
+[Your Cognito User Pool ID from local.env]
+```
+
+### 5. COGNITO_CLIENT_ID
+```
+[Your Cognito Client ID from local.env]
+```
+
+**Note:** Use the same values from your working `local.env` file.
 
 ## How It Works
 
-The application now reads configuration in this priority order:
-1. Environment variables (highest priority)
-2. Configuration files (fallback)
+1. **GitHub Secrets** store your AWS credentials securely
+2. **CI/CD workflow** automatically injects these values during deployment
+3. **Your server** gets the credentials without manual setup
+4. **Every deployment** automatically includes the latest credentials
 
-This allows you to:
-- Use environment variables in production (from GitHub secrets)
-- Use configuration files for local development
-- Keep sensitive data out of the codebase
+## Benefits
 
-## Security Benefits
+- ✅ **Secure**: Credentials never appear in your code
+- ✅ **Automatic**: No manual setup needed after each push
+- ✅ **Consistent**: Same credentials on every deployment
+- ✅ **No maintenance**: Set once, works forever
 
-- ✅ No hardcoded credentials in the codebase
-- ✅ Credentials are encrypted in GitHub secrets
-- ✅ Different credentials for different environments
-- ✅ Easy to rotate credentials without code changes
+## Setup Steps
+
+1. Go to: https://github.com/YohannesTesfaye21/coptic_backend/settings/secrets/actions
+2. Click **"New repository secret"**
+3. Add each of the 5 secrets above
+4. Push any change to trigger deployment
+5. Your server will automatically have AWS credentials!
+
+## Verification
+
+After setting up secrets and pushing changes:
+
+```bash
+# SSH into your server
+ssh -i ~/.ssh/id_ed25519 root@162.243.165.212
+
+# Check if credentials are properly deployed
+cd ~/coptic-app-backend
+cat .env | grep AWS
+
+# Check if containers are using AWS
+docker logs coptic_api_prod | grep -i "AWS\|Cognito"
+```
+
+You should see AWS credentials in the `.env` file and AwsCognitoService logs instead of SimpleAuthService.
