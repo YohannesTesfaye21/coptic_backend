@@ -28,8 +28,11 @@ namespace coptic_app_backend.Infrastructure.Repositories
             _context.ChatMessages.Add(message);
             await _context.SaveChangesAsync();
             
-            // Update conversation
-            await UpdateConversationLastMessageAsync(message);
+            // Update conversation only for non-broadcast messages
+            if (!message.IsBroadcast)
+            {
+                await UpdateConversationLastMessageAsync(message);
+            }
             
             return message;
         }
