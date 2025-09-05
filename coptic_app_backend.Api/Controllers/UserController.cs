@@ -53,7 +53,7 @@ namespace coptic_app_backend.Api.Controllers
                 
                 if (currentUserType != "Abune")
                 {
-                    return Forbid("Access denied - Abune only");
+                    return StatusCode(403, "Access denied - Abune only");
                 }
                 
                 // For Abune users, get their own ID as the AbuneId
@@ -97,15 +97,15 @@ namespace coptic_app_backend.Api.Controllers
                     // Abune can only see users under their community
                     if (user.AbuneId != currentUserAbuneId)
                     {
-                        return Forbid("You can only view users in your own community");
+                        return StatusCode(403, "You can only view users in your own community");
                     }
                 }
                 else if (currentUserType == "Regular")
                 {
-                    // Regular users can only see their own profile
-                    if (userId != currentUserId)
+                    // Regular users can see their own profile OR their Abune's profile
+                    if (userId != currentUserId && userId != currentUserAbuneId)
                     {
-                        return Forbid("You can only view your own profile");
+                        return StatusCode(403, "You can only view your own profile or your Abune's profile");
                     }
                 }
 
@@ -145,15 +145,15 @@ namespace coptic_app_backend.Api.Controllers
                     // Abune can only see users under their community
                     if (user.AbuneId != currentUserAbuneId)
                     {
-                        return Forbid("You can only view users in your own community");
+                        return StatusCode(403, "You can only view users in your own community");
                     }
                 }
                 else if (currentUserType == "Regular")
                 {
-                    // Regular users can only see their own profile
-                    if (user.Id != currentUserId)
+                    // Regular users can see their own profile OR their Abune's profile
+                    if (user.Id != currentUserId && user.Id != currentUserAbuneId)
                     {
-                        return Forbid("You can only view their own profile");
+                        return StatusCode(403, "You can only view your own profile or your Abune's profile");
                     }
                 }
 
