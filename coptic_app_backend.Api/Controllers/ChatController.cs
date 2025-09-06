@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using coptic_app_backend.Domain.Interfaces;
 using coptic_app_backend.Domain.Models;
+using coptic_app_backend.Api.Hubs;
 
 namespace coptic_app_backend.Api.Controllers
 {
@@ -15,11 +17,13 @@ namespace coptic_app_backend.Api.Controllers
     {
         private readonly IChatService _chatService;
         private readonly IUserRepository _userRepository;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public ChatController(IChatService chatService, IUserRepository userRepository)
+        public ChatController(IChatService chatService, IUserRepository userRepository, IHubContext<ChatHub> hubContext)
         {
             _chatService = chatService;
             _userRepository = userRepository;
+            _hubContext = hubContext;
         }
 
         #region Core Messaging
@@ -49,6 +53,12 @@ namespace coptic_app_backend.Api.Controllers
                     request.Content, 
                     request.MessageType
                 );
+
+                // Send real-time WebSocket notification to recipient
+                await _hubContext.Clients.Group(request.RecipientId).SendAsync("ReceiveMessage", message);
+                
+                // Send delivery confirmation to sender
+                await _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
 
                 return Ok(message);
             }
@@ -133,6 +143,9 @@ namespace coptic_app_backend.Api.Controllers
                     request.Content,
                     request.MessageType
                 );
+
+                // Send real-time WebSocket notification to all community members
+                await _hubContext.Clients.Group(currentUserAbuneId).SendAsync("ReceiveBroadcastMessage", message);
 
                 return Ok(message);
             }

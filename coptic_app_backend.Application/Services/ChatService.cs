@@ -35,10 +35,14 @@ namespace coptic_app_backend.Application.Services
                 Content = content,
                 MessageType = messageType,
                 IsBroadcast = false,
-                Status = MessageStatus.Sent
+                Status = MessageStatus.Sent,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 
-            return await _chatRepository.CreateMessageAsync(message);
+            // Save to database
+            var savedMessage = await _chatRepository.CreateMessageAsync(message);
+
+            return savedMessage;
         }
 
         public async Task<ChatMessage> SendMediaMessageAsync(string senderId, string recipientId, string abuneId, string fileUrl, string fileName, long fileSize, string fileType, MessageType messageType, int? voiceDuration = null)
@@ -61,10 +65,13 @@ namespace coptic_app_backend.Application.Services
                 MessageType = messageType,
                 VoiceDuration = voiceDuration,
                 IsBroadcast = false,
-                Status = MessageStatus.Sent
+                Status = MessageStatus.Sent,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 
-            return await _chatRepository.CreateMessageAsync(message);
+            // Save to database
+            var savedMessage = await _chatRepository.CreateMessageAsync(message);
+            return savedMessage;
         }
 
         public async Task<ChatMessage> SendBroadcastMessageAsync(string senderId, string abuneId, string content, MessageType messageType = MessageType.Text)
@@ -84,10 +91,14 @@ namespace coptic_app_backend.Application.Services
                 Content = content,
                 MessageType = messageType,
                 IsBroadcast = true,
-                Status = MessageStatus.Sent
+                Status = MessageStatus.Sent,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 
-            return await _chatRepository.CreateMessageAsync(message);
+            // Save to database
+            var savedMessage = await _chatRepository.CreateMessageAsync(message);
+
+            return savedMessage;
         }
 
         public async Task<ChatMessage> SendBroadcastMediaMessageAsync(string senderId, string abuneId, string fileUrl, string fileName, long fileSize, string fileType, MessageType messageType, int? voiceDuration = null)
@@ -111,10 +122,14 @@ namespace coptic_app_backend.Application.Services
                 MessageType = messageType,
                 VoiceDuration = voiceDuration,
                 IsBroadcast = true,
-                Status = MessageStatus.Sent
+                Status = MessageStatus.Sent,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 
-            return await _chatRepository.CreateMessageAsync(message);
+            // Save to database
+            var savedMessage = await _chatRepository.CreateMessageAsync(message);
+
+            return savedMessage;
         }
 
         #endregion
