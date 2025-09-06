@@ -34,6 +34,7 @@ namespace coptic_app_backend.Domain.Interfaces
         // Community features
         Task<List<ChatMessage>> GetCommunityMessagesAsync(string userId, string abuneId, int limit = 50, long? beforeTimestamp = null);
         Task<List<ChatMessage>> GetBroadcastMessagesAsync(string userId, string abuneId, int limit = 50, long? beforeTimestamp = null);
+        Task<List<string>> GetCommunityMemberIdsAsync(string abuneId);
         
         // Search and discovery
         Task<List<ChatMessage>> SearchMessagesAsync(string userId, string abuneId, string searchTerm, int limit = 20);
