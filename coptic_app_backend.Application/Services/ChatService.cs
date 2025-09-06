@@ -357,6 +357,11 @@ namespace coptic_app_backend.Application.Services
             return await _chatRepository.GetBroadcastMessagesAsync(abuneId, limit, beforeTimestamp);
         }
 
+        public async Task<List<string>> GetCommunityMemberIdsAsync(string abuneId)
+        {
+            return await _chatRepository.GetCommunityMemberIdsAsync(abuneId);
+        }
+
         #endregion
 
         #region Search and Discovery

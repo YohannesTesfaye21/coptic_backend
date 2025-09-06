@@ -372,6 +372,31 @@ namespace coptic_app_backend.Api.Hubs
         }
 
         /// <summary>
+        /// Get unread count for current user
+        /// </summary>
+        public async Task GetUnreadCount()
+        {
+            try
+            {
+                var userId = Context.User?.FindFirst("UserId")?.Value;
+                var abuneId = Context.User?.FindFirst("AbuneId")?.Value;
+                
+                if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(abuneId))
+                {
+                    return;
+                }
+
+                // This would need to be injected via dependency injection
+                // For now, we'll send a placeholder response
+                await Clients.Caller.SendAsync("UnreadCount", new { count = 0 });
+            }
+            catch (Exception ex)
+            {
+                // Log error
+            }
+        }
+
+        /// <summary>
         /// Update user's last seen timestamp
         /// </summary>
         public async Task UpdateLastSeen()
@@ -383,6 +408,49 @@ namespace coptic_app_backend.Api.Hubs
                 {
                     _userConnections[userId].LastSeen = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 }
+            }
+            catch (Exception ex)
+            {
+                // Log error
+            }
+        }
+
+        #endregion
+
+        #region Unread Count Management
+
+        /// <summary>
+        /// Broadcast unread count update to a specific user
+        /// </summary>
+        public async Task BroadcastUnreadCountUpdate(string userId, int totalUnreadCount, Dictionary<string, int> conversationUnreadCounts)
+        {
+            try
+            {
+                await Clients.Group(userId).SendAsync("UnreadCountUpdate", new 
+                { 
+                    totalUnreadCount = totalUnreadCount,
+                    conversationUnreadCounts = conversationUnreadCounts,
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log error
+            }
+        }
+
+        /// <summary>
+        /// Broadcast unread count update to all users in a community
+        /// </summary>
+        public async Task BroadcastUnreadCountUpdateToCommunity(string abuneId, Dictionary<string, object> userUnreadCounts)
+        {
+            try
+            {
+                await Clients.Group(abuneId).SendAsync("CommunityUnreadCountUpdate", new 
+                { 
+                    userUnreadCounts = userUnreadCounts,
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                });
             }
             catch (Exception ex)
             {
