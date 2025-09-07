@@ -6,6 +6,7 @@ using coptic_app_backend.Domain.Models;
 using coptic_app_backend.Api.Hubs;
 using coptic_app_backend.Api.Models;
 using Microsoft.Extensions.Logging;
+using coptic_app_backend.Infrastructure.Data;
 
 namespace coptic_app_backend.Api.Controllers
 {
@@ -22,14 +23,16 @@ namespace coptic_app_backend.Api.Controllers
         private readonly IHubContext<ChatHub> _hubContext;
         private readonly IFileStorageService _fileStorageService;
         private readonly ILogger<ChatController> _logger;
+        private readonly ApplicationDbContext _context;
 
-        public ChatController(IChatService chatService, IUserRepository userRepository, IHubContext<ChatHub> hubContext, IFileStorageService fileStorageService, ILogger<ChatController> logger)
+        public ChatController(IChatService chatService, IUserRepository userRepository, IHubContext<ChatHub> hubContext, IFileStorageService fileStorageService, ILogger<ChatController> logger, ApplicationDbContext context)
         {
             _chatService = chatService;
             _userRepository = userRepository;
             _hubContext = hubContext;
             _fileStorageService = fileStorageService;
             _logger = logger;
+            _context = context;
         }
 
         #region Core Messaging
@@ -1151,5 +1154,43 @@ namespace coptic_app_backend.Api.Controllers
         public string Content { get; set; } = string.Empty;
     }
 
-    #endregion
+        #endregion
+
+        #region Database Maintenance
+
+        /// <summary>
+        /// Fix database schema - add ConversationId column if missing
+        /// </summary>
+        /// <returns>Success message</returns>
+        [HttpPost("fix-database")]
+        public async Task<ActionResult> FixDatabase()
+        {
+            try
+            {
+                // Execute SQL to add ConversationId column if it doesn't exist
+                var sql = @"
+                    DO $$ 
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'ChatMessages' 
+                            AND column_name = 'ConversationId'
+                        ) THEN
+                            ALTER TABLE ""ChatMessages"" ADD COLUMN ""ConversationId"" character varying(450);
+                            CREATE INDEX IF NOT EXISTS ""IX_ChatMessages_ConversationId"" ON ""ChatMessages"" (""ConversationId"");
+                        END IF;
+                    END $$;";
+
+                await _context.Database.ExecuteSqlRawAsync(sql);
+                
+                return Ok(new { message = "Database schema fixed successfully - ConversationId column added" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Database fix failed", message = ex.Message });
+            }
+        }
+
+        #endregion
+    }
 }
