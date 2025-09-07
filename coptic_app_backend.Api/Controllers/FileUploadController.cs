@@ -72,18 +72,14 @@ namespace coptic_app_backend.Api.Controllers
 
                 // Store the file
                 using var stream = request.File.OpenReadStream();
-                var fileUrl = await _fileStorageService.StoreFileAsync(
+                var fileName = await _fileStorageService.UploadFileAsync(
                     stream,
                     request.File.FileName,
-                    request.File.ContentType,
-                    currentUserId,
-                    request.RecipientId,
-                    currentUserAbuneId,
-                    request.MessageType
+                    request.File.ContentType
                 );
 
-                // Get file info
-                var fileInfo = await _fileStorageService.GetFileInfoAsync(fileUrl);
+                // Generate file URL
+                var fileUrl = await _fileStorageService.GetFileUrlAsync(fileName);
 
                 var response = new FileUploadResponse
                 {
@@ -149,14 +145,14 @@ namespace coptic_app_backend.Api.Controllers
 
                 // Store the file
                 using var stream = request.File.OpenReadStream();
-                var fileUrl = await _fileStorageService.StoreBroadcastFileAsync(
+                var fileName = await _fileStorageService.UploadFileAsync(
                     stream,
                     request.File.FileName,
-                    request.File.ContentType,
-                    currentUserId,
-                    currentUserAbuneId,
-                    request.MessageType
+                    request.File.ContentType
                 );
+
+                // Generate file URL
+                var fileUrl = await _fileStorageService.GetFileUrlAsync(fileName);
 
                 var response = new FileUploadResponse
                 {
@@ -183,68 +179,12 @@ namespace coptic_app_backend.Api.Controllers
         #region File Management
 
         /// <summary>
-        /// Get chat files for a conversation
+        /// Download a file by its name
         /// </summary>
-        /// <param name="recipientId">Other participant's user ID</param>
-        /// <param name="messageType">Optional message type filter</param>
-        /// <returns>List of chat files</returns>
-        [HttpGet("chat/{recipientId}")]
-        public async Task<ActionResult<List<ChatFileInfo>>> GetChatFiles(string recipientId, [FromQuery] MessageType? messageType = null)
-        {
-            try
-            {
-                var currentUserId = User.FindFirst("UserId")?.Value;
-                var currentUserAbuneId = User.FindFirst("AbuneId")?.Value;
-
-                if (string.IsNullOrEmpty(currentUserId) || string.IsNullOrEmpty(currentUserAbuneId))
-                {
-                    return BadRequest("User information not found in token");
-                }
-
-                var files = await _fileStorageService.GetChatFilesAsync(currentUserId, recipientId, currentUserAbuneId, messageType);
-                return Ok(files);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get chat files");
-                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Get broadcast files for the community
-        /// </summary>
-        /// <param name="messageType">Optional message type filter</param>
-        /// <returns>List of broadcast files</returns>
-        [HttpGet("broadcast")]
-        public async Task<ActionResult<List<ChatFileInfo>>> GetBroadcastFiles([FromQuery] MessageType? messageType = null)
-        {
-            try
-            {
-                var currentUserAbuneId = User.FindFirst("AbuneId")?.Value;
-
-                if (string.IsNullOrEmpty(currentUserAbuneId))
-                {
-                    return BadRequest("User information not found in token");
-                }
-
-                var files = await _fileStorageService.GetBroadcastFilesAsync(currentUserAbuneId, messageType);
-                return Ok(files);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get broadcast files");
-                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
-            }
-        }
-
-        /// <summary>
-        /// Delete a file (only file owner can delete)
-        /// </summary>
-        /// <param name="fileUrl">File URL to delete</param>
-        /// <returns>Delete result</returns>
-        [HttpDelete("{fileUrl}")]
-        public async Task<ActionResult> DeleteFile(string fileUrl)
+        /// <param name="fileName">File name to download</param>
+        /// <returns>File stream</returns>
+        [HttpGet("download/{fileName}")]
+        public async Task<IActionResult> DownloadFile(string fileName)
         {
             try
             {
@@ -254,16 +194,61 @@ namespace coptic_app_backend.Api.Controllers
                     return BadRequest("User information not found in token");
                 }
 
-                // TODO: Add validation that user owns the file or is Abune
-                var success = await _fileStorageService.DeleteFileAsync(fileUrl);
-                
-                if (success)
+                var fileStream = await _fileStorageService.DownloadFileAsync(fileName);
+                return File(fileStream, "application/octet-stream", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to download file");
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Check if a file exists
+        /// </summary>
+        /// <param name="fileName">File name to check</param>
+        /// <returns>File existence status</returns>
+        [HttpGet("exists/{fileName}")]
+        public async Task<ActionResult<bool>> FileExists(string fileName)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst("UserId")?.Value;
+                if (string.IsNullOrEmpty(currentUserId))
                 {
-                    _logger.LogInformation($"File deleted successfully: {fileUrl} by user {currentUserId}");
-                    return Ok(new { message = "File deleted successfully" });
+                    return BadRequest("User information not found in token");
                 }
 
-                return BadRequest("Failed to delete file");
+                var exists = await _fileStorageService.FileExistsAsync(fileName);
+                return Ok(exists);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to check file existence");
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Delete a file by its name
+        /// </summary>
+        /// <param name="fileName">File name to delete</param>
+        /// <returns>Delete result</returns>
+        [HttpDelete("{fileName}")]
+        public async Task<ActionResult> DeleteFile(string fileName)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst("UserId")?.Value;
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return BadRequest("User information not found in token");
+                }
+
+                await _fileStorageService.DeleteFileAsync(fileName);
+                _logger.LogInformation($"File deleted successfully: {fileName} by user {currentUserId}");
+                return Ok(new { message = "File deleted successfully" });
             }
             catch (Exception ex)
             {
