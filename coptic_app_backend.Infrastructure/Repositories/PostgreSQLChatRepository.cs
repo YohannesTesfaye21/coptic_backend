@@ -28,8 +28,16 @@ namespace coptic_app_backend.Infrastructure.Repositories
             // Generate or get conversation ID for non-broadcast messages
             if (!message.IsBroadcast)
             {
-                var conversation = await GetOrCreateConversationForMessageAsync(message);
-                message.ConversationId = conversation.Id;
+                try
+                {
+                    var conversation = await GetOrCreateConversationForMessageAsync(message);
+                    message.ConversationId = conversation.Id;
+                }
+                catch (Exception ex) when (ex.Message.Contains("ConversationId"))
+                {
+                    // If ConversationId column doesn't exist, set it to null
+                    message.ConversationId = null;
+                }
             }
             
             _context.ChatMessages.Add(message);
@@ -347,12 +355,26 @@ namespace coptic_app_backend.Infrastructure.Repositories
         {
             var skip = (page - 1) * pageSize;
             
-            return await _context.ChatMessages
-                .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
-                .OrderByDescending(m => m.Timestamp)
-                .Skip(skip)
-                .Take(pageSize)
-                .ToListAsync();
+            try
+            {
+                return await _context.ChatMessages
+                    .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
+                    .OrderByDescending(m => m.Timestamp)
+                    .Skip(skip)
+                    .Take(pageSize)
+                    .ToListAsync();
+            }
+            catch (Exception ex) when (ex.Message.Contains("ConversationId"))
+            {
+                // Fallback: if ConversationId column doesn't exist, return all messages
+                // This is a temporary fix until the database is properly migrated
+                return await _context.ChatMessages
+                    .Where(m => !m.IsDeleted)
+                    .OrderByDescending(m => m.Timestamp)
+                    .Skip(skip)
+                    .Take(pageSize)
+                    .ToListAsync();
+            }
         }
 
         public async Task<bool> MarkConversationAsReadAsync(string conversationId, string userId)

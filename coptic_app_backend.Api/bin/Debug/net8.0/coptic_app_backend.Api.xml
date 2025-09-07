@@ -615,6 +615,18 @@
         <member name="M:coptic_app_backend.Api.Migrations.AddChatSystemTables.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
+        <member name="T:coptic_app_backend.Api.Migrations.AddConversationIdColumn">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddConversationIdColumn.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddConversationIdColumn.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddConversationIdColumn.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
         <member name="T:coptic_app_backend.Api.Models.FileUploadRequest">
             <summary>
             Request model for file upload with chat message

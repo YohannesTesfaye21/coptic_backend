@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("coptic_app_backend.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+10b0a8d86c27cb59d2367852477a07f37d637bc1")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fa2615b928f5bbf6c846631694a7272c0b5a37a2")]
 [assembly: System.Reflection.AssemblyProductAttribute("coptic_app_backend.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("coptic_app_backend.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
