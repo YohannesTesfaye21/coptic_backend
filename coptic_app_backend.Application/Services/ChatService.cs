@@ -254,7 +254,7 @@ namespace coptic_app_backend.Application.Services
                 Content = content,
                 MessageType = messageType,
                 ReplyToMessageId = replyToMessageId,
-                ConversationId = replyToMessage.ConversationId, // Use the same conversation as the original message
+                // ConversationId = replyToMessage.ConversationId, // Temporarily commented out
                 IsBroadcast = false,
                 Status = MessageStatus.Sent,
                 Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()

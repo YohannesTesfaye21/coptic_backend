@@ -69,7 +69,6 @@ namespace coptic_app_backend.Infrastructure.Data
                 entity.Property(e => e.ReplyToMessageId).HasMaxLength(450);
                 entity.Property(e => e.ForwardedFromMessageId).HasMaxLength(450);
                 entity.Property(e => e.DeletedBy).HasMaxLength(450);
-                entity.Property(e => e.ConversationId).HasMaxLength(450).IsRequired(false);
                 
                 // Configure enums
                 entity.Property(e => e.MessageType).HasConversion<int>();
@@ -117,7 +116,6 @@ namespace coptic_app_backend.Infrastructure.Data
                 entity.HasIndex(e => e.IsDeleted);
                 entity.HasIndex(e => e.MessageType);
                 entity.HasIndex(e => e.Status);
-                entity.HasIndex(e => e.ConversationId);
             });
 
             // Configure ChatConversation entity

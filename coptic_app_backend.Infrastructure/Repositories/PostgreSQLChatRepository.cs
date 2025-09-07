@@ -31,12 +31,12 @@ namespace coptic_app_backend.Infrastructure.Repositories
                 try
                 {
                     var conversation = await GetOrCreateConversationForMessageAsync(message);
-                    message.ConversationId = conversation.Id;
+                    // message.ConversationId = conversation.Id; // Temporarily commented out
                 }
                 catch (Exception ex) when (ex.Message.Contains("ConversationId"))
                 {
                     // If ConversationId column doesn't exist, set it to null
-                    message.ConversationId = null;
+                    // message.ConversationId = null; // Temporarily commented out
                 }
             }
             
@@ -355,26 +355,13 @@ namespace coptic_app_backend.Infrastructure.Repositories
         {
             var skip = (page - 1) * pageSize;
             
-            try
-            {
-                return await _context.ChatMessages
-                    .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
-                    .OrderByDescending(m => m.Timestamp)
-                    .Skip(skip)
-                    .Take(pageSize)
-                    .ToListAsync();
-            }
-            catch (Exception ex) when (ex.Message.Contains("ConversationId"))
-            {
-                // Fallback: if ConversationId column doesn't exist, return all messages
-                // This is a temporary fix until the database is properly migrated
-                return await _context.ChatMessages
-                    .Where(m => !m.IsDeleted)
-                    .OrderByDescending(m => m.Timestamp)
-                    .Skip(skip)
-                    .Take(pageSize)
-                    .ToListAsync();
-            }
+            // Temporarily return all messages since ConversationId is not available
+            return await _context.ChatMessages
+                .Where(m => !m.IsDeleted)
+                .OrderByDescending(m => m.Timestamp)
+                .Skip(skip)
+                .Take(pageSize)
+                .ToListAsync();
         }
 
         public async Task<bool> MarkConversationAsReadAsync(string conversationId, string userId)
