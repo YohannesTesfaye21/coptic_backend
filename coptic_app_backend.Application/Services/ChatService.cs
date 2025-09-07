@@ -375,6 +375,11 @@ namespace coptic_app_backend.Application.Services
             return await _chatRepository.GetMessageReadStatusAsync(messageId);
         }
 
+        public async Task<List<ChatMessage>> GetMessagesAsync(string conversationId, int page = 1, int pageSize = 50)
+        {
+            return await _chatRepository.GetMessagesAsync(conversationId, page, pageSize);
+        }
+
         public async Task<bool> MarkConversationAsReadAsync(string conversationId, string userId)
         {
             var conversation = await _chatRepository.GetConversationByIdAsync(conversationId);

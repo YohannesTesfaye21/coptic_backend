@@ -343,6 +343,18 @@ namespace coptic_app_backend.Infrastructure.Repositories
             }
         }
 
+        public async Task<List<ChatMessage>> GetMessagesAsync(string conversationId, int page = 1, int pageSize = 50)
+        {
+            var skip = (page - 1) * pageSize;
+            
+            return await _context.ChatMessages
+                .Where(m => m.ConversationId == conversationId && !m.IsDeleted)
+                .OrderByDescending(m => m.Timestamp)
+                .Skip(skip)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
         public async Task<bool> MarkConversationAsReadAsync(string conversationId, string userId)
         {
             var conversation = await _context.ChatConversations.FindAsync(conversationId);

@@ -439,6 +439,40 @@ namespace coptic_app_backend.Api.Controllers
 
         #endregion
 
+        #region Messages
+
+        /// <summary>
+        /// Get messages for a specific conversation
+        /// </summary>
+        /// <param name="conversationId">Conversation ID</param>
+        /// <param name="page">Page number (default: 1)</param>
+        /// <param name="pageSize">Page size (default: 50)</param>
+        /// <returns>List of messages</returns>
+        [HttpGet("messages")]
+        public async Task<ActionResult<List<ChatMessage>>> GetMessages(string conversationId, int page = 1, int pageSize = 50)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst("UserId")?.Value;
+                var currentUserAbuneId = User.FindFirst("AbuneId")?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId) || string.IsNullOrEmpty(currentUserAbuneId))
+                {
+                    return BadRequest("User information not found in token");
+                }
+
+                var messages = await _chatService.GetMessagesAsync(conversationId, page, pageSize);
+                return Ok(messages);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get messages for conversation {ConversationId}", conversationId);
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        #endregion
+
         #region Conversations
 
         /// <summary>

@@ -1,4 +1,5 @@
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/bin/Debug/net8.0/coptic_app_backend.Infrastructure.deps.json
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/bin/Debug/net8.0/coptic_app_backend.Infrastructure.runtimeconfig.json
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/bin/Debug/net8.0/coptic_app_backend.Infrastructure.dll
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/bin/Debug/net8.0/coptic_app_backend.Infrastructure.pdb
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/bin/Debug/net8.0/coptic_app_backend.Domain.dll
@@ -8,11 +9,10 @@
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/coptic_app_backend.Infrastructure.AssemblyInfoInputs.cache
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/coptic_app_backend.Infrastructure.AssemblyInfo.cs
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/coptic_app_backend.Infrastructure.csproj.CoreCompileInputs.cache
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/coptic_app_backend.Infrastructure.sourcelink.json
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/coptic_a.C819D8F3.Up2Date
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/coptic_app_backend.Infrastructure.dll
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/refint/coptic_app_backend.Infrastructure.dll
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/coptic_app_backend.Infrastructure.pdb
-/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/ref/coptic_app_backend.Infrastructure.dll
-/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/bin/Debug/net8.0/coptic_app_backend.Infrastructure.runtimeconfig.json
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/coptic_app_backend.Infrastructure.genruntimeconfig.cache
-/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/coptic_app_backend.Infrastructure.sourcelink.json
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/Debug/net8.0/ref/coptic_app_backend.Infrastructure.dll

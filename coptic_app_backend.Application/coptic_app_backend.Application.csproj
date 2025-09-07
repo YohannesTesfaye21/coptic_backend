@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\coptic_app_backend.Domain\coptic_app_backend.Domain.csproj" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
   </ItemGroup>
 
 </Project>

@@ -293,6 +293,13 @@
             <param name="request">Message request</param>
             <returns>Sent message</returns>
         </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.SendMessageWithFile(coptic_app_backend.Api.Models.FileUploadRequest)">
+            <summary>
+            Send a message with file upload (unified endpoint for text and files)
+            </summary>
+            <param name="request">File upload request containing message and file data</param>
+            <returns>Sent message with file information</returns>
+        </member>
         <member name="M:coptic_app_backend.Api.Controllers.ChatController.SendMediaMessage(coptic_app_backend.Api.Controllers.SendMediaMessageRequest)">
             <summary>
             Send a media message (Abune to User or User to Abune only)
@@ -313,13 +320,6 @@
             </summary>
             <param name="request">Broadcast media message request</param>
             <returns>Sent broadcast message</returns>
-        </member>
-        <member name="M:coptic_app_backend.Api.Controllers.ChatController.DeleteMessage(System.String)">
-            <summary>
-            Delete a message (only sender can delete)
-            </summary>
-            <param name="messageId">Message ID to delete</param>
-            <returns>Delete result</returns>
         </member>
         <member name="M:coptic_app_backend.Api.Controllers.ChatController.MarkMessageAsRead(System.String)">
             <summary>
@@ -343,11 +343,20 @@
             <param name="messageId">Message ID</param>
             <returns>Remove reaction result</returns>
         </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.GetMessages(System.String,System.Int32,System.Int32)">
+            <summary>
+            Get messages for a specific conversation
+            </summary>
+            <param name="conversationId">Conversation ID</param>
+            <param name="page">Page number (default: 1)</param>
+            <param name="pageSize">Page size (default: 50)</param>
+            <returns>List of messages</returns>
+        </member>
         <member name="M:coptic_app_backend.Api.Controllers.ChatController.GetConversations">
             <summary>
-            Get user's conversations
+            Get user's conversations with unread counts
             </summary>
-            <returns>List of conversations</returns>
+            <returns>List of conversations with unread counts</returns>
         </member>
         <member name="M:coptic_app_backend.Api.Controllers.ChatController.GetConversationMessages(System.String,System.Int32,System.Nullable{System.Int64})">
             <summary>
@@ -370,6 +379,13 @@
             Get unread counts for all conversations
             </summary>
             <returns>Dictionary of conversation ID to unread count</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.MarkConversationAsRead(System.String)">
+            <summary>
+            Mark messages as read in a conversation
+            </summary>
+            <param name="conversationId">Conversation ID</param>
+            <returns>Success status</returns>
         </member>
         <member name="M:coptic_app_backend.Api.Controllers.ChatController.GetCommunityMessages(System.Int32,System.Nullable{System.Int64})">
             <summary>
@@ -395,6 +411,38 @@
             <param name="limit">Number of results to return</param>
             <returns>List of matching messages</returns>
         </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.DeleteMessage(System.String)">
+            <summary>
+            Delete a message
+            </summary>
+            <param name="messageId">Message ID to delete</param>
+            <returns>Success status</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.EditMessage(System.String,coptic_app_backend.Api.Controllers.EditMessageRequest)">
+            <summary>
+            Edit a message
+            </summary>
+            <param name="messageId">Message ID to edit</param>
+            <param name="request">Edit message request</param>
+            <returns>Updated message</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.ReplyToMessage(coptic_app_backend.Api.Controllers.ReplyMessageRequest)">
+            <summary>
+            Reply to a message
+            </summary>
+            <param name="request">Reply message request</param>
+            <returns>Reply message</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.UpdateAndBroadcastUnreadCounts(System.String,System.String)">
+            <summary>
+            Update and broadcast unread counts to a specific user
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.ChatController.UpdateAndBroadcastUnreadCountsToCommunity(System.String)">
+            <summary>
+            Update and broadcast unread counts to all community members
+            </summary>
+        </member>
         <member name="T:coptic_app_backend.Api.Controllers.FileUploadController">
             <summary>
             File upload controller for chat media files
@@ -414,26 +462,25 @@
             <param name="request">Broadcast file upload request</param>
             <returns>File upload result with URL</returns>
         </member>
-        <member name="M:coptic_app_backend.Api.Controllers.FileUploadController.GetChatFiles(System.String,System.Nullable{coptic_app_backend.Domain.Models.MessageType})">
+        <member name="M:coptic_app_backend.Api.Controllers.FileUploadController.DownloadFile(System.String)">
             <summary>
-            Get chat files for a conversation
+            Download a file by its name
             </summary>
-            <param name="recipientId">Other participant's user ID</param>
-            <param name="messageType">Optional message type filter</param>
-            <returns>List of chat files</returns>
+            <param name="fileName">File name to download</param>
+            <returns>File stream</returns>
         </member>
-        <member name="M:coptic_app_backend.Api.Controllers.FileUploadController.GetBroadcastFiles(System.Nullable{coptic_app_backend.Domain.Models.MessageType})">
+        <member name="M:coptic_app_backend.Api.Controllers.FileUploadController.FileExists(System.String)">
             <summary>
-            Get broadcast files for the community
+            Check if a file exists
             </summary>
-            <param name="messageType">Optional message type filter</param>
-            <returns>List of broadcast files</returns>
+            <param name="fileName">File name to check</param>
+            <returns>File existence status</returns>
         </member>
         <member name="M:coptic_app_backend.Api.Controllers.FileUploadController.DeleteFile(System.String)">
             <summary>
-            Delete a file (only file owner can delete)
+            Delete a file by its name
             </summary>
-            <param name="fileUrl">File URL to delete</param>
+            <param name="fileName">File name to delete</param>
             <returns>Delete result</returns>
         </member>
         <member name="T:coptic_app_backend.Api.Controllers.UserController">
@@ -492,6 +539,11 @@
             Send typing indicator to a specific user
             </summary>
         </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.Typing(System.String,System.Boolean)">
+            <summary>
+            Typing indicator method (alias for Flutter compatibility)
+            </summary>
+        </member>
         <member name="M:coptic_app_backend.Api.Hubs.ChatHub.MarkMessageAsRead(System.String)">
             <summary>
             Mark a message as read
@@ -507,9 +559,24 @@
             Get online users in the community
             </summary>
         </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.GetUnreadCount">
+            <summary>
+            Get unread count for current user
+            </summary>
+        </member>
         <member name="M:coptic_app_backend.Api.Hubs.ChatHub.UpdateLastSeen">
             <summary>
             Update user's last seen timestamp
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.BroadcastUnreadCountUpdate(System.String,System.Int32,System.Collections.Generic.Dictionary{System.String,System.Int32})">
+            <summary>
+            Broadcast unread count update to a specific user
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Hubs.ChatHub.BroadcastUnreadCountUpdateToCommunity(System.String,System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            Broadcast unread count update to all users in a community
             </summary>
         </member>
         <member name="T:coptic_app_backend.Api.Migrations.InitialCreate">
@@ -535,6 +602,48 @@
         </member>
         <member name="M:coptic_app_backend.Api.Migrations.AddHierarchicalUserSystem.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
+        </member>
+        <member name="T:coptic_app_backend.Api.Migrations.AddChatSystemTables">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddChatSystemTables.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddChatSystemTables.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddChatSystemTables.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:coptic_app_backend.Api.Models.FileUploadRequest">
+            <summary>
+            Request model for file upload with chat message
+            </summary>
+        </member>
+        <member name="P:coptic_app_backend.Api.Models.FileUploadRequest.RecipientId">
+            <summary>
+            Recipient user ID
+            </summary>
+        </member>
+        <member name="P:coptic_app_backend.Api.Models.FileUploadRequest.Content">
+            <summary>
+            Message content (optional for file messages)
+            </summary>
+        </member>
+        <member name="P:coptic_app_backend.Api.Models.FileUploadRequest.MessageType">
+            <summary>
+            Type of message (0=Text, 1=Image, 2=Document, 3=Voice)
+            </summary>
+        </member>
+        <member name="P:coptic_app_backend.Api.Models.FileUploadRequest.File">
+            <summary>
+            File to upload (optional for text messages)
+            </summary>
+        </member>
+        <member name="P:coptic_app_backend.Api.Models.FileUploadRequest.VoiceDuration">
+            <summary>
+            Duration in seconds for voice messages
+            </summary>
         </member>
     </members>
 </doc>

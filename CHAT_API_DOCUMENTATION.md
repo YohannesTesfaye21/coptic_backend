@@ -15,6 +15,69 @@ All chat endpoints require JWT authentication. Include the token in the Authoriz
 Authorization: Bearer <your_jwt_token>
 ```
 
+## Message Types
+The chat system supports different message types. Use the appropriate `messageType` value in your requests:
+
+| Value | Type | Description | Content Field | Additional Fields |
+|-------|------|-------------|---------------|-------------------|
+| `0` | Text | Plain text message | `content` | None |
+| `1` | Image | Image file | `fileUrl` | `fileName`, `fileSize`, `fileType` |
+| `2` | Document | Document file (PDF, DOC, etc.) | `fileUrl` | `fileName`, `fileSize`, `fileType` |
+| `3` | Voice | Voice/audio message | `fileUrl` | `fileName`, `fileSize`, `fileType`, `voiceDuration` |
+
+### Message Type Examples:
+```json
+// Text message
+{
+  "messageType": 0,
+  "content": "Hello, this is a text message"
+}
+
+// Image message
+{
+  "messageType": 1,
+  "fileUrl": "https://example.com/image.jpg",
+  "fileName": "image.jpg",
+  "fileSize": 1024000,
+  "fileType": "image/jpeg"
+}
+
+// Voice message
+{
+  "messageType": 3,
+  "fileUrl": "https://example.com/voice.mp3",
+  "fileName": "voice.mp3",
+  "fileSize": 512000,
+  "fileType": "audio/mpeg",
+  "voiceDuration": 30
+}
+```
+
+## Message Status Values
+Messages have different status values that indicate their delivery state:
+
+| Value | Status | Description |
+|-------|--------|-------------|
+| `0` | Sent | Message has been sent successfully |
+| `1` | Delivered | Message has been delivered to recipient |
+| `2` | Read | Message has been read by recipient |
+
+## Message Read Status Format
+The `readStatus` field contains JSON data with user read information:
+```json
+{
+  "readStatus": "{\"37c118ab-8c06-43b1-9146-acfa57614b59\": {\"ReadAt\": 1756906720, \"UserId\": \"37c118ab-8c06-43b1-9146-acfa57614b59\"}}"
+}
+```
+
+## Message Reactions Format
+The `reactions` field contains JSON data with user reactions:
+```json
+{
+  "reactions": "[{\"UserId\": \"37c118ab-8c06-43b1-9146-acfa57614b59\", \"Emoji\": \"👍\", \"ReactedAt\": 1756906720}]"
+}
+```
+
 ## WebSocket Connection
 SignalR Hub endpoint for real-time communication:
 ```

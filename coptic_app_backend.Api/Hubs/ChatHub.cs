@@ -293,6 +293,14 @@ namespace coptic_app_backend.Api.Hubs
             }
         }
 
+        /// <summary>
+        /// Typing indicator method (alias for Flutter compatibility)
+        /// </summary>
+        public async Task Typing(string recipientId, bool isTyping)
+        {
+            await SendTypingIndicator(recipientId, isTyping);
+        }
+
         #endregion
 
         #region Message Status

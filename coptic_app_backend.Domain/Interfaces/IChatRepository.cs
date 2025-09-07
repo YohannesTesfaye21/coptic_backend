@@ -31,6 +31,7 @@ namespace coptic_app_backend.Domain.Interfaces
         Task<int> GetUnreadCountAsync(string userId, string conversationId);
         Task<Dictionary<string, int>> GetUnreadCountsForUserAsync(string userId, string abuneId);
         Task<List<MessageReadStatus>> GetMessageReadStatusAsync(string messageId);
+        Task<List<ChatMessage>> GetMessagesAsync(string conversationId, int page = 1, int pageSize = 50);
         Task<bool> MarkConversationAsReadAsync(string conversationId, string userId);
         
         // Community messaging

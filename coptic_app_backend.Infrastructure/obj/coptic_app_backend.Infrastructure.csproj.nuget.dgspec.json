@@ -131,7 +131,11 @@
             },
             "Microsoft.Extensions.Logging.Abstractions": {
               "target": "Package",
-              "version": "[8.0.0, )"
+              "version": "[9.0.4, )"
+            },
+            "Minio": {
+              "target": "Package",
+              "version": "[6.0.5, )"
             },
             "Newtonsoft.Json": {
               "target": "Package",

@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "tKUj8JcI3leNqqxebzkGK082Fnu1th6cllCTpmgQTko=",
+  "Hash": "1aLOr8Xb5QXTA8JsPiLHG41ohXbQ1VhwTeRyWxSzQec=",
   "Source": "coptic_app_backend.Api",
   "BasePath": "_content/coptic_app_backend.Api",
   "Mode": "Default",
@@ -34,6 +34,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot/index.html"
+    },
+    {
+      "Identity": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/wwwroot/uploads/2025-09-06/Screenshot 2025-08-28 at 22.30.02_20250906204410_5d53be46.png",
+      "SourceId": "coptic_app_backend.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/wwwroot/",
+      "BasePath": "_content/coptic_app_backend.Api",
+      "RelativePath": "uploads/2025-09-06/Screenshot 2025-08-28 at 22.30.02_20250906204410_5d53be46.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/uploads/2025-09-06/Screenshot 2025-08-28 at 22.30.02_20250906204410_5d53be46.png"
     }
   ]
 }

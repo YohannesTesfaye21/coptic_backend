@@ -5,8 +5,8 @@
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/Debug/net8.0/coptic_app_backend.Domain.AssemblyInfoInputs.cache
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/Debug/net8.0/coptic_app_backend.Domain.AssemblyInfo.cs
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/Debug/net8.0/coptic_app_backend.Domain.csproj.CoreCompileInputs.cache
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/Debug/net8.0/coptic_app_backend.Domain.sourcelink.json
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/Debug/net8.0/coptic_app_backend.Domain.dll
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/Debug/net8.0/refint/coptic_app_backend.Domain.dll
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/Debug/net8.0/coptic_app_backend.Domain.pdb
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/Debug/net8.0/ref/coptic_app_backend.Domain.dll
-/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/Debug/net8.0/coptic_app_backend.Domain.sourcelink.json
