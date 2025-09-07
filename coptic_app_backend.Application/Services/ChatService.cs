@@ -42,6 +42,9 @@ namespace coptic_app_backend.Application.Services
             // Save to database
             var savedMessage = await _chatRepository.CreateMessageAsync(message);
 
+            // Update conversation with the new message and unread count
+            await _chatRepository.UpdateConversationForMessageAsync(savedMessage);
+
             return savedMessage;
         }
 
@@ -71,6 +74,10 @@ namespace coptic_app_backend.Application.Services
 
             // Save to database
             var savedMessage = await _chatRepository.CreateMessageAsync(message);
+            
+            // Update conversation with the new message and unread count
+            await _chatRepository.UpdateConversationForMessageAsync(savedMessage);
+            
             return savedMessage;
         }
 
@@ -136,6 +143,37 @@ namespace coptic_app_backend.Application.Services
 
         #region Message Management
 
+        public async Task<bool> UpdateMessageAsync(ChatMessage message)
+        {
+            return await _chatRepository.UpdateMessageAsync(message);
+        }
+
+        public async Task<ChatMessage?> EditMessageAsync(string messageId, string userId, string newContent)
+        {
+            var message = await _chatRepository.GetMessageByIdAsync(messageId);
+            if (message == null) return null;
+
+            // Only sender can edit their own message
+            if (message.SenderId != userId)
+            {
+                throw new UnauthorizedAccessException("User can only edit their own messages");
+            }
+
+            // Check if message is too old to edit (e.g., 24 hours)
+            var messageAge = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - message.Timestamp;
+            if (messageAge > 86400) // 24 hours in seconds
+            {
+                throw new InvalidOperationException("Message is too old to edit");
+            }
+
+            // Update message content
+            message.Content = newContent;
+            message.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            var success = await _chatRepository.UpdateMessageAsync(message);
+            return success ? message : null;
+        }
+
         public async Task<bool> DeleteMessageAsync(string messageId, string userId)
         {
             var message = await _chatRepository.GetMessageByIdAsync(messageId);
@@ -200,13 +238,14 @@ namespace coptic_app_backend.Application.Services
                 throw new UnauthorizedAccessException("User cannot send message to this recipient");
             }
 
-            // Validate reply message exists and is in the same conversation
+            // Validate reply message exists and is in the same community
             var replyToMessage = await _chatRepository.GetMessageByIdAsync(replyToMessageId);
             if (replyToMessage == null || replyToMessage.AbuneId != abuneId)
             {
                 throw new ArgumentException("Reply message not found or invalid");
             }
 
+            // Ensure the reply is in the same conversation as the original message
             var message = new ChatMessage
             {
                 SenderId = senderId,
@@ -215,8 +254,10 @@ namespace coptic_app_backend.Application.Services
                 Content = content,
                 MessageType = messageType,
                 ReplyToMessageId = replyToMessageId,
+                ConversationId = replyToMessage.ConversationId, // Use the same conversation as the original message
                 IsBroadcast = false,
-                Status = MessageStatus.Sent
+                Status = MessageStatus.Sent,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 
             return await _chatRepository.CreateMessageAsync(message);
@@ -251,7 +292,8 @@ namespace coptic_app_backend.Application.Services
                 VoiceDuration = forwardFromMessage.VoiceDuration,
                 ForwardedFromMessageId = forwardFromMessageId,
                 IsBroadcast = false,
-                Status = MessageStatus.Sent
+                Status = MessageStatus.Sent,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 
             return await _chatRepository.CreateMessageAsync(message);
@@ -333,6 +375,20 @@ namespace coptic_app_backend.Application.Services
             return await _chatRepository.GetMessageReadStatusAsync(messageId);
         }
 
+        public async Task<bool> MarkConversationAsReadAsync(string conversationId, string userId)
+        {
+            var conversation = await _chatRepository.GetConversationByIdAsync(conversationId);
+            if (conversation == null) return false;
+
+            // Validate that user is part of this conversation
+            if (conversation.UserId != userId && conversation.AbuneId != userId)
+            {
+                throw new UnauthorizedAccessException("User is not part of this conversation");
+            }
+
+            return await _chatRepository.MarkConversationAsReadAsync(conversationId, userId);
+        }
+
         #endregion
 
         #region Community Features
@@ -374,6 +430,25 @@ namespace coptic_app_backend.Application.Services
             }
 
             return await _chatRepository.SearchMessagesAsync(userId, abuneId, searchTerm, limit);
+        }
+
+        #endregion
+
+        #region Additional Message Operations
+
+        public async Task<ChatMessage?> GetMessageByIdAsync(string messageId)
+        {
+            return await _chatRepository.GetMessageByIdAsync(messageId);
+        }
+
+        public async Task<ChatConversation?> GetConversationByIdAsync(string conversationId)
+        {
+            return await _chatRepository.GetConversationByIdAsync(conversationId);
+        }
+
+        public async Task<bool> UpdateConversationForMessageAsync(ChatMessage message)
+        {
+            return await _chatRepository.UpdateConversationForMessageAsync(message);
         }
 
         #endregion

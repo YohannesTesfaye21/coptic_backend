@@ -25,6 +25,13 @@ namespace coptic_app_backend.Infrastructure.Repositories
             message.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             message.Status = MessageStatus.Sent;
             
+            // Generate or get conversation ID for non-broadcast messages
+            if (!message.IsBroadcast)
+            {
+                var conversation = await GetOrCreateConversationForMessageAsync(message);
+                message.ConversationId = conversation.Id;
+            }
+            
             _context.ChatMessages.Add(message);
             await _context.SaveChangesAsync();
             
@@ -217,6 +224,12 @@ namespace coptic_app_backend.Infrastructure.Repositories
                                         c.IsActive);
         }
 
+        public async Task<ChatConversation?> GetConversationByIdAsync(string conversationId)
+        {
+            return await _context.ChatConversations
+                .FirstOrDefaultAsync(c => c.Id == conversationId && c.IsActive);
+        }
+
         public async Task<List<ChatConversation>> GetUserConversationsAsync(string userId, string abuneId)
         {
             // For Abune users, get all conversations with their community members
@@ -271,7 +284,7 @@ namespace coptic_app_backend.Infrastructure.Repositories
             var conversation = await _context.ChatConversations.FindAsync(conversationId);
             if (conversation == null) return 0;
 
-            // Get all messages in this conversation
+            // Get all messages in this conversation where the user is the recipient
             var messages = await _context.ChatMessages
                 .Where(m => !m.IsDeleted && 
                            m.RecipientId == userId &&
@@ -330,6 +343,71 @@ namespace coptic_app_backend.Infrastructure.Repositories
             }
         }
 
+        public async Task<bool> MarkConversationAsReadAsync(string conversationId, string userId)
+        {
+            var conversation = await _context.ChatConversations.FindAsync(conversationId);
+            if (conversation == null) return false;
+
+            try
+            {
+                // Get all unread messages in this conversation for this user
+                var unreadMessages = await _context.ChatMessages
+                    .Where(m => !m.IsDeleted && 
+                               m.AbuneId == conversation.AbuneId &&
+                               m.RecipientId == userId &&
+                               m.SenderId == conversation.AbuneId)
+                    .ToListAsync();
+
+                var currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+                // Mark all unread messages as read
+                foreach (var message in unreadMessages)
+                {
+                    try
+                    {
+                        var readStatus = JsonSerializer.Deserialize<Dictionary<string, MessageReadStatus>>(message.ReadStatus) ?? new Dictionary<string, MessageReadStatus>();
+                        
+                        if (!readStatus.ContainsKey(userId))
+                        {
+                            readStatus[userId] = new MessageReadStatus
+                            {
+                                UserId = userId,
+                                ReadAt = currentTime
+                            };
+
+                            message.ReadStatus = JsonSerializer.Serialize(readStatus);
+                            message.Status = MessageStatus.Read;
+                        }
+                    }
+                    catch
+                    {
+                        // If ReadStatus is invalid JSON, create new read status
+                        var readStatus = new Dictionary<string, MessageReadStatus>
+                        {
+                            [userId] = new MessageReadStatus
+                            {
+                                UserId = userId,
+                                ReadAt = currentTime
+                            }
+                        };
+                        message.ReadStatus = JsonSerializer.Serialize(readStatus);
+                        message.Status = MessageStatus.Read;
+                    }
+                }
+
+                // Reset conversation unread count
+                conversation.UnreadCount = 0;
+                conversation.UpdatedAt = currentTime;
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         #endregion
 
         #region Community Messaging
@@ -379,6 +457,12 @@ namespace coptic_app_backend.Infrastructure.Repositories
 
         #region Private Methods
 
+        public async Task<bool> UpdateConversationForMessageAsync(ChatMessage message)
+        {
+            await UpdateConversationLastMessageAsync(message);
+            return true;
+        }
+
         private async Task UpdateConversationUnreadCountAsync(string abuneId, string userId)
         {
             var conversation = await GetConversationAsync(abuneId, userId, abuneId);
@@ -392,7 +476,7 @@ namespace coptic_app_backend.Infrastructure.Repositories
             }
         }
 
-        private async Task UpdateConversationLastMessageAsync(ChatMessage message)
+        private async Task<ChatConversation> GetOrCreateConversationForMessageAsync(ChatMessage message)
         {
             // Determine the Abune and User IDs for the conversation
             string abuneId, userId;
@@ -421,13 +505,36 @@ namespace coptic_app_backend.Infrastructure.Repositories
                     LastMessageAt = message.Timestamp,
                     LastMessageContent = message.Content,
                     LastMessageType = message.MessageType,
-                    UnreadCount = 1,
+                    UnreadCount = 0,
                     CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                     UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                 };
                 await CreateConversationAsync(conversation);
             }
+            
+            return conversation;
+        }
+
+        private async Task UpdateConversationLastMessageAsync(ChatMessage message)
+        {
+            // Determine the Abune and User IDs for the conversation
+            string abuneId, userId;
+            
+            if (message.SenderId == message.AbuneId)
+            {
+                // Abune is sending to a user
+                abuneId = message.SenderId;
+                userId = message.RecipientId;
+            }
             else
+            {
+                // User is sending to Abune
+                abuneId = message.AbuneId;
+                userId = message.SenderId;
+            }
+            
+            var conversation = await GetConversationAsync(abuneId, userId, message.AbuneId);
+            if (conversation != null)
             {
                 // Update existing conversation
                 conversation.LastMessageAt = message.Timestamp;

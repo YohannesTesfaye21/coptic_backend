@@ -135,25 +135,22 @@ namespace coptic_app_backend.Infrastructure.Services
         /// <summary>
         /// Delete a file
         /// </summary>
-        public async Task<bool> DeleteFileAsync(string fileUrl)
+        public async Task DeleteFileAsync(string fileName)
         {
             try
             {
-                var fullPath = Path.Combine(_baseStoragePath, fileUrl.Replace("uploads/", ""));
+                var fullPath = Path.Combine(_baseStoragePath, fileName.Replace("uploads/", ""));
                 
                 if (File.Exists(fullPath))
                 {
                     File.Delete(fullPath);
-                    _logger.LogInformation($"File deleted successfully: {fileUrl}");
-                    return true;
+                    _logger.LogInformation($"File deleted successfully: {fileName}");
                 }
-                
-                return false;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to delete file: {FileUrl}", fileUrl);
-                return false;
+                _logger.LogError(ex, "Failed to delete file: {FileName}", fileName);
+                throw;
             }
         }
 
@@ -177,6 +174,80 @@ namespace coptic_app_backend.Infrastructure.Services
             {
                 _logger.LogError(ex, "Failed to get file info: {FileUrl}", fileUrl);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Upload a file (implements IFileStorageService)
+        /// </summary>
+        public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType)
+        {
+            try
+            {
+                // Generate unique filename to prevent conflicts
+                var uniqueFileName = GenerateUniqueFileName(fileName);
+                
+                // Create directory structure: uploads/general/{date}/
+                var dateFolder = DateTime.UtcNow.ToString("yyyy-MM-dd");
+                var directoryPath = Path.Combine(_baseStoragePath, "general", dateFolder);
+                
+                // Ensure directory exists
+                Directory.CreateDirectory(directoryPath);
+                
+                // Full file path
+                var filePath = Path.Combine(directoryPath, uniqueFileName);
+                
+                // Store the file
+                using (var fileStream2 = new FileStream(filePath, FileMode.Create))
+                {
+                    await fileStream.CopyToAsync(fileStream2);
+                }
+                
+                // Return the relative URL path for database storage
+                var relativeUrl = Path.Combine("uploads", "general", dateFolder, uniqueFileName)
+                    .Replace("\\", "/"); // Ensure forward slashes for URLs
+                
+                _logger.LogInformation($"File uploaded successfully: {relativeUrl}");
+                return relativeUrl;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to upload file");
+                throw new Exception("Failed to upload file", ex);
+            }
+        }
+
+        /// <summary>
+        /// Download a file (implements IFileStorageService)
+        /// </summary>
+        public async Task<Stream> DownloadFileAsync(string fileName)
+        {
+            return await GetFileAsync(fileName);
+        }
+
+        /// <summary>
+        /// Get file URL (implements IFileStorageService)
+        /// </summary>
+        public async Task<string> GetFileUrlAsync(string fileName)
+        {
+            // For local storage, return the relative URL
+            return fileName.StartsWith("uploads/") ? fileName : $"uploads/{fileName}";
+        }
+
+        /// <summary>
+        /// Check if file exists (implements IFileStorageService)
+        /// </summary>
+        public async Task<bool> FileExistsAsync(string fileName)
+        {
+            try
+            {
+                var fullPath = Path.Combine(_baseStoragePath, fileName.Replace("uploads/", ""));
+                return File.Exists(fullPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to check file existence: {FileName}", fileName);
+                return false;
             }
         }
 

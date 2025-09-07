@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.SignalR;
 using coptic_app_backend.Domain.Interfaces;
 using coptic_app_backend.Domain.Models;
 using coptic_app_backend.Api.Hubs;
+using coptic_app_backend.Api.Models;
+using Microsoft.Extensions.Logging;
 
 namespace coptic_app_backend.Api.Controllers
 {
@@ -18,12 +20,16 @@ namespace coptic_app_backend.Api.Controllers
         private readonly IChatService _chatService;
         private readonly IUserRepository _userRepository;
         private readonly IHubContext<ChatHub> _hubContext;
+        private readonly IFileStorageService _fileStorageService;
+        private readonly ILogger<ChatController> _logger;
 
-        public ChatController(IChatService chatService, IUserRepository userRepository, IHubContext<ChatHub> hubContext)
+        public ChatController(IChatService chatService, IUserRepository userRepository, IHubContext<ChatHub> hubContext, IFileStorageService fileStorageService, ILogger<ChatController> logger)
         {
             _chatService = chatService;
             _userRepository = userRepository;
             _hubContext = hubContext;
+            _fileStorageService = fileStorageService;
+            _logger = logger;
         }
 
         #region Core Messaging
@@ -71,6 +77,122 @@ namespace coptic_app_backend.Api.Controllers
             }
             catch (Exception ex)
             {
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Send a message with file upload (unified endpoint for text and files)
+        /// </summary>
+        /// <param name="request">File upload request containing message and file data</param>
+        /// <returns>Sent message with file information</returns>
+        [HttpPost("send-with-file")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<object>> SendMessageWithFile([FromForm] FileUploadRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst("UserId")?.Value;
+                var currentUserAbuneId = User.FindFirst("AbuneId")?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId) || string.IsNullOrEmpty(currentUserAbuneId))
+                {
+                    return BadRequest("User information not found in token");
+                }
+
+                string messageContent = request.Content ?? string.Empty;
+                string? fileUrl = null;
+                string? fileName = null;
+                long fileSize = 0;
+
+                // Handle file upload if provided
+                if (request.File != null && request.File.Length > 0)
+                {
+                    using var stream = request.File.OpenReadStream();
+                    fileName = await _fileStorageService.UploadFileAsync(
+                        stream,
+                        request.File.FileName,
+                        request.File.ContentType
+                    );
+                    fileUrl = await _fileStorageService.GetFileUrlAsync(fileName);
+                    fileSize = request.File.Length;
+
+                    // For file messages, use file name as content if no content provided
+                    if (string.IsNullOrEmpty(request.Content))
+                    {
+                        messageContent = request.File.FileName;
+                    }
+                }
+
+                // Convert MessageType from int to enum
+                var messageType = (MessageType)request.MessageType;
+
+                // Send message through chat service
+                var message = await _chatService.SendMessageAsync(
+                    currentUserId,
+                    request.RecipientId,
+                    currentUserAbuneId,
+                    messageContent,
+                    messageType
+                );
+
+                // Update message with file metadata if file was uploaded
+                if (!string.IsNullOrEmpty(fileUrl))
+                {
+                    message.FileUrl = fileUrl;
+                    message.FileName = fileName;
+                    message.FileSize = fileSize;
+                    message.FileType = request.File?.ContentType;
+                    message.VoiceDuration = request.VoiceDuration;
+                    
+                    // Update the message in database with file metadata
+                    await _chatService.UpdateMessageAsync(message);
+                }
+
+                // Send real-time WebSocket notification to recipient
+                await _hubContext.Clients.Group(request.RecipientId).SendAsync("ReceiveMessage", new
+                {
+                    id = message.Id,
+                    senderId = message.SenderId,
+                    recipientId = message.RecipientId,
+                    content = messageContent,
+                    messageType = messageType,
+                    timestamp = message.Timestamp,
+                    fileUrl = message.FileUrl,
+                    fileName = message.FileName,
+                    fileSize = message.FileSize,
+                    fileType = message.FileType,
+                    voiceDuration = message.VoiceDuration
+                });
+
+                // Send delivery confirmation to sender
+                await _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
+
+                // Update unread counts and broadcast to recipient
+                await UpdateAndBroadcastUnreadCounts(request.RecipientId, currentUserAbuneId);
+
+                return Ok(new
+                {
+                    id = message.Id,
+                    senderId = message.SenderId,
+                    recipientId = message.RecipientId,
+                    content = messageContent,
+                    messageType = messageType,
+                    timestamp = message.Timestamp,
+                    fileUrl = message.FileUrl,
+                    fileName = message.FileName,
+                    fileSize = message.FileSize,
+                    fileType = message.FileType,
+                    voiceDuration = message.VoiceDuration
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send message with file");
                 return StatusCode(500, new { error = "Internal server error", message = ex.Message });
             }
         }
@@ -211,39 +333,6 @@ namespace coptic_app_backend.Api.Controllers
 
         #region Message Management
 
-        /// <summary>
-        /// Delete a message (only sender can delete)
-        /// </summary>
-        /// <param name="messageId">Message ID to delete</param>
-        /// <returns>Delete result</returns>
-        [HttpDelete("{messageId}")]
-        public async Task<ActionResult> DeleteMessage(string messageId)
-        {
-            try
-            {
-                var currentUserId = User.FindFirst("UserId")?.Value;
-                if (string.IsNullOrEmpty(currentUserId))
-                {
-                    return BadRequest("User information not found in token");
-                }
-
-                var success = await _chatService.DeleteMessageAsync(messageId, currentUserId);
-                if (success)
-                {
-                    return Ok(new { message = "Message deleted successfully" });
-                }
-
-                return BadRequest("Failed to delete message");
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
-            }
-        }
 
         /// <summary>
         /// Mark a message as read
@@ -521,8 +610,14 @@ namespace coptic_app_backend.Api.Controllers
                     return BadRequest("User information not found in token");
                 }
 
-                // Mark conversation as read (this would need to be implemented in the service)
-                // For now, we'll just update the unread counts
+                // Mark conversation as read
+                var success = await _chatService.MarkConversationAsReadAsync(conversationId, currentUserId);
+                if (!success)
+                {
+                    return BadRequest("Failed to mark conversation as read");
+                }
+
+                // Update and broadcast unread counts
                 await UpdateAndBroadcastUnreadCounts(currentUserId, currentUserAbuneId);
 
                 return Ok(new { success = true, message = "Conversation marked as read" });
@@ -648,6 +743,256 @@ namespace coptic_app_backend.Api.Controllers
 
         #endregion
 
+        #region Message Management
+
+        /// <summary>
+        /// Delete a message
+        /// </summary>
+        /// <param name="messageId">Message ID to delete</param>
+        /// <returns>Success status</returns>
+        [HttpDelete("messages/{messageId}")]
+        public async Task<ActionResult> DeleteMessage(string messageId)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst("UserId")?.Value;
+                var currentUserAbuneId = User.FindFirst("AbuneId")?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId) || string.IsNullOrEmpty(currentUserAbuneId))
+                {
+                    return BadRequest("User information not found in token");
+                }
+
+                // Get the message to check ownership
+                var message = await _chatService.GetMessageByIdAsync(messageId);
+                if (message == null)
+                {
+                    return NotFound("Message not found");
+                }
+
+                // Check if user is the sender or has permission to delete
+                if (message.SenderId != currentUserId)
+                {
+                    return Forbid("You can only delete your own messages");
+                }
+
+                // Delete the message
+                var success = await _chatService.DeleteMessageAsync(messageId, currentUserId);
+                if (!success)
+                {
+                    return StatusCode(500, "Failed to delete message");
+                }
+
+                // Notify all participants in the conversation about the deletion
+                var conversation = await _chatService.GetConversationByIdAsync(message.ConversationId);
+                if (conversation != null)
+                {
+                    var participants = new List<string> { conversation.UserId, conversation.AbuneId };
+                    foreach (var participant in participants)
+                    {
+                        await _hubContext.Clients.Group(participant).SendAsync("MessageDeleted", new
+                        {
+                            messageId = messageId,
+                            conversationId = message.ConversationId,
+                            deletedBy = currentUserId,
+                            timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                        });
+                    }
+                }
+
+                return Ok(new { message = "Message deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete message");
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Edit a message
+        /// </summary>
+        /// <param name="messageId">Message ID to edit</param>
+        /// <param name="request">Edit message request</param>
+        /// <returns>Updated message</returns>
+        [HttpPut("messages/{messageId}")]
+        public async Task<ActionResult<object>> EditMessage(string messageId, [FromBody] EditMessageRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst("UserId")?.Value;
+                var currentUserAbuneId = User.FindFirst("AbuneId")?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId) || string.IsNullOrEmpty(currentUserAbuneId))
+                {
+                    return BadRequest("User information not found in token");
+                }
+
+                // Get the message to check ownership
+                var message = await _chatService.GetMessageByIdAsync(messageId);
+                if (message == null)
+                {
+                    return NotFound("Message not found");
+                }
+
+                // Check if user is the sender
+                if (message.SenderId != currentUserId)
+                {
+                    return Forbid("You can only edit your own messages");
+                }
+
+                // Edit the message using the service
+                var editedMessage = await _chatService.EditMessageAsync(messageId, currentUserId, request.Content);
+                if (editedMessage == null)
+                {
+                    return StatusCode(500, "Failed to edit message");
+                }
+
+                // Notify all participants in the conversation about the edit
+                var conversation = await _chatService.GetConversationByIdAsync(message.ConversationId);
+                if (conversation != null)
+                {
+                    var participants = new List<string> { conversation.UserId, conversation.AbuneId };
+                    foreach (var participant in participants)
+                    {
+                        await _hubContext.Clients.Group(participant).SendAsync("MessageEdited", new
+                        {
+                            id = editedMessage.Id,
+                            senderId = editedMessage.SenderId,
+                            recipientId = editedMessage.RecipientId,
+                            content = editedMessage.Content,
+                            messageType = editedMessage.MessageType,
+                            timestamp = editedMessage.Timestamp,
+                            fileUrl = editedMessage.FileUrl,
+                            fileName = editedMessage.FileName,
+                            fileSize = editedMessage.FileSize,
+                            fileType = editedMessage.FileType,
+                            voiceDuration = editedMessage.VoiceDuration,
+                            editedBy = currentUserId,
+                            editedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                        });
+                    }
+                }
+
+                return Ok(new
+                {
+                    id = editedMessage.Id,
+                    senderId = editedMessage.SenderId,
+                    recipientId = editedMessage.RecipientId,
+                    content = editedMessage.Content,
+                    messageType = editedMessage.MessageType,
+                    timestamp = editedMessage.Timestamp,
+                    fileUrl = editedMessage.FileUrl,
+                    fileName = editedMessage.FileName,
+                    fileSize = editedMessage.FileSize,
+                    fileType = editedMessage.FileType,
+                    voiceDuration = editedMessage.VoiceDuration
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to edit message");
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Reply to a message
+        /// </summary>
+        /// <param name="request">Reply message request</param>
+        /// <returns>Reply message</returns>
+        [HttpPost("reply")]
+        public async Task<ActionResult<object>> ReplyToMessage([FromBody] ReplyMessageRequest request)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst("UserId")?.Value;
+                var currentUserAbuneId = User.FindFirst("AbuneId")?.Value;
+
+                if (string.IsNullOrEmpty(currentUserId) || string.IsNullOrEmpty(currentUserAbuneId))
+                {
+                    return BadRequest("User information not found in token");
+                }
+
+                // Get the original message to determine recipient
+                var originalMessage = await _chatService.GetMessageByIdAsync(request.OriginalMessageId);
+                if (originalMessage == null)
+                {
+                    return NotFound("Original message not found");
+                }
+
+                // Determine recipient (opposite of original sender)
+                string recipientId = originalMessage.SenderId == currentUserId ? originalMessage.RecipientId : originalMessage.SenderId;
+
+                // Create reply content with reference to original message
+                string replyContent = $"Replying to: {originalMessage.Content}\n\n{request.Content}";
+
+                // Send the reply message
+                var replyMessage = await _chatService.SendMessageAsync(
+                    currentUserId,
+                    recipientId,
+                    currentUserAbuneId,
+                    replyContent,
+                    MessageType.Text
+                );
+
+                // Update conversation with the reply
+                await _chatService.UpdateConversationForMessageAsync(replyMessage);
+
+                // Send real-time WebSocket notification to recipient
+                await _hubContext.Clients.Group(recipientId).SendAsync("ReceiveMessage", new
+                {
+                    id = replyMessage.Id,
+                    senderId = replyMessage.SenderId,
+                    recipientId = replyMessage.RecipientId,
+                    content = replyMessage.Content,
+                    messageType = replyMessage.MessageType,
+                    timestamp = replyMessage.Timestamp,
+                    fileUrl = replyMessage.FileUrl,
+                    fileName = replyMessage.FileName,
+                    fileSize = replyMessage.FileSize,
+                    fileType = replyMessage.FileType,
+                    voiceDuration = replyMessage.VoiceDuration,
+                    isReply = true,
+                    originalMessageId = request.OriginalMessageId
+                });
+
+                // Send delivery confirmation to sender
+                await _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", replyMessage.Id, recipientId);
+
+                // Update unread counts and broadcast to recipient
+                await UpdateAndBroadcastUnreadCounts(recipientId, currentUserAbuneId);
+
+                return Ok(new
+                {
+                    id = replyMessage.Id,
+                    senderId = replyMessage.SenderId,
+                    recipientId = replyMessage.RecipientId,
+                    content = replyMessage.Content,
+                    messageType = replyMessage.MessageType,
+                    timestamp = replyMessage.Timestamp,
+                    fileUrl = replyMessage.FileUrl,
+                    fileName = replyMessage.FileName,
+                    fileSize = replyMessage.FileSize,
+                    fileType = replyMessage.FileType,
+                    voiceDuration = replyMessage.VoiceDuration,
+                    isReply = true,
+                    originalMessageId = request.OriginalMessageId
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { error = "Forbidden", message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send reply message");
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        #endregion
+
         #region Private Helper Methods
 
         /// <summary>
@@ -759,6 +1104,17 @@ namespace coptic_app_backend.Api.Controllers
     public class AddReactionRequest
     {
         public string Emoji { get; set; } = string.Empty;
+    }
+
+    public class EditMessageRequest
+    {
+        public string Content { get; set; } = string.Empty;
+    }
+
+    public class ReplyMessageRequest
+    {
+        public string OriginalMessageId { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
     }
 
     #endregion

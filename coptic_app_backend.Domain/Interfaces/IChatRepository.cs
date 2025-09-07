@@ -21,14 +21,17 @@ namespace coptic_app_backend.Domain.Interfaces
         // Conversation operations
         Task<ChatConversation> CreateConversationAsync(ChatConversation conversation);
         Task<ChatConversation?> GetConversationAsync(string abuneId, string userId, string communityAbuneId);
+        Task<ChatConversation?> GetConversationByIdAsync(string conversationId);
         Task<List<ChatConversation>> GetUserConversationsAsync(string userId, string abuneId);
         Task<bool> UpdateConversationAsync(ChatConversation conversation);
         Task<bool> DeactivateConversationAsync(string conversationId);
+        Task<bool> UpdateConversationForMessageAsync(ChatMessage message);
         
         // Read status and unread count
         Task<int> GetUnreadCountAsync(string userId, string conversationId);
         Task<Dictionary<string, int>> GetUnreadCountsForUserAsync(string userId, string abuneId);
         Task<List<MessageReadStatus>> GetMessageReadStatusAsync(string messageId);
+        Task<bool> MarkConversationAsReadAsync(string conversationId, string userId);
         
         // Community messaging
         Task<List<ChatMessage>> GetCommunityMessagesAsync(string abuneId, int limit = 50, long? beforeTimestamp = null);

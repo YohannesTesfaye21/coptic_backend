@@ -28,6 +28,11 @@ namespace coptic_app_backend.Domain.Models
         public string AbuneId { get; set; } = string.Empty;
         
         /// <summary>
+        /// Conversation ID for grouping messages
+        /// </summary>
+        public string ConversationId { get; set; } = string.Empty;
+        
+        /// <summary>
         /// Message content (text message)
         /// </summary>
         public string? Content { get; set; }
