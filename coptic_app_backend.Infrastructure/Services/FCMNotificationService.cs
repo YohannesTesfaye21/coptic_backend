@@ -7,6 +7,8 @@ using coptic_app_backend.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Google.Apis.Auth.OAuth2;
+using System.Threading;
 using System.Linq;
 
 namespace coptic_app_backend.Infrastructure.Services
@@ -16,6 +18,8 @@ namespace coptic_app_backend.Infrastructure.Services
         private readonly HttpClient _httpClient;
         private readonly string _fcmProjectId;
         private readonly string _fcmServiceAccountJson;
+        private string? _cachedAccessToken;
+        private DateTime _tokenExpiryUtc = DateTime.MinValue;
         private readonly IUserRepository _userRepository;
         private readonly ILogger<FCMNotificationService> _logger;
 
@@ -26,6 +30,44 @@ namespace coptic_app_backend.Infrastructure.Services
             _fcmServiceAccountJson = configuration["FCM:ServiceAccountJson"] ?? "";
             _userRepository = userRepository;
             _logger = logger;
+        }
+
+        private async Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(_cachedAccessToken) && DateTime.UtcNow < _tokenExpiryUtc.AddMinutes(-2))
+                {
+                    return _cachedAccessToken;
+                }
+
+                GoogleCredential credential;
+                if (!string.IsNullOrWhiteSpace(_fcmServiceAccountJson) && _fcmServiceAccountJson.TrimStart().StartsWith("{"))
+                {
+                    credential = GoogleCredential.FromJson(_fcmServiceAccountJson);
+                }
+                else if (!string.IsNullOrWhiteSpace(_fcmServiceAccountJson))
+                {
+                    credential = GoogleCredential.FromFile(_fcmServiceAccountJson);
+                }
+                else
+                {
+                    credential = await GoogleCredential.GetApplicationDefaultAsync(cancellationToken);
+                }
+
+                var scoped = credential.CreateScoped("https://www.googleapis.com/auth/firebase.messaging");
+                var token = await scoped.UnderlyingCredential.GetAccessTokenForRequestAsync(cancellationToken: cancellationToken);
+
+                // We don't get expiry via GetAccessTokenForRequestAsync; set short cache window
+                _cachedAccessToken = token;
+                _tokenExpiryUtc = DateTime.UtcNow.AddMinutes(45);
+                return token;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to obtain FCM access token");
+                return null;
+            }
         }
 
         public async Task<bool> SendNotificationAsync(string userId, string title, string body)
@@ -70,10 +112,17 @@ namespace coptic_app_backend.Infrastructure.Services
                 var json = JsonConvert.SerializeObject(message);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PostAsync(
-                    $"https://fcm.googleapis.com/v1/projects/{_fcmProjectId}/messages:send",
-                    content
-                );
+                var accessToken = await GetAccessTokenAsync();
+                if (string.IsNullOrEmpty(accessToken))
+                {
+                    _logger.LogWarning("Skipping FCM send due to missing access token");
+                    return false;
+                }
+
+                var request = new HttpRequestMessage(HttpMethod.Post, $"https://fcm.googleapis.com/v1/projects/{_fcmProjectId}/messages:send");
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                request.Content = content;
+                var response = await _httpClient.SendAsync(request);
 
                 var success = response.IsSuccessStatusCode;
                 _logger.LogInformation("Notification sent to user {UserId}: {Success}", userId, success);

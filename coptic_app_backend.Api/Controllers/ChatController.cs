@@ -21,14 +21,16 @@ namespace coptic_app_backend.Api.Controllers
         private readonly IUserRepository _userRepository;
         private readonly IHubContext<ChatHub> _hubContext;
         private readonly IFileStorageService _fileStorageService;
+        private readonly INotificationService _notificationService;
         private readonly ILogger<ChatController> _logger;
 
-        public ChatController(IChatService chatService, IUserRepository userRepository, IHubContext<ChatHub> hubContext, IFileStorageService fileStorageService, ILogger<ChatController> logger)
+        public ChatController(IChatService chatService, IUserRepository userRepository, IHubContext<ChatHub> hubContext, IFileStorageService fileStorageService, INotificationService notificationService, ILogger<ChatController> logger)
         {
             _chatService = chatService;
             _userRepository = userRepository;
             _hubContext = hubContext;
             _fileStorageService = fileStorageService;
+            _notificationService = notificationService;
             _logger = logger;
         }
 
@@ -60,11 +62,10 @@ namespace coptic_app_backend.Api.Controllers
                     request.MessageType
                 );
 
-                // Send real-time WebSocket notification to recipient
-                await _hubContext.Clients.Group(request.RecipientId).SendAsync("ReceiveMessage", message);
-                
-                // Send delivery confirmation to sender
-                await _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
+                // FCM-only (still emit to WS if connected, harmless)
+                _ = _hubContext.Clients.Group(request.RecipientId).SendAsync("ReceiveMessage", message);
+                _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
+                _ = _notificationService.SendNotificationAsync(request.RecipientId, "New message", message.Content);
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(request.RecipientId, currentUserAbuneId);
@@ -149,8 +150,8 @@ namespace coptic_app_backend.Api.Controllers
                     await _chatService.UpdateMessageAsync(message);
                 }
 
-                // Send real-time WebSocket notification to recipient
-                await _hubContext.Clients.Group(request.RecipientId).SendAsync("ReceiveMessage", new
+                // FCM-only (still emit to WS if connected, harmless)
+                _ = _hubContext.Clients.Group(request.RecipientId).SendAsync("ReceiveMessage", new
                 {
                     id = message.Id,
                     senderId = message.SenderId,
@@ -165,8 +166,8 @@ namespace coptic_app_backend.Api.Controllers
                     voiceDuration = message.VoiceDuration
                 });
 
-                // Send delivery confirmation to sender
-                await _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
+                _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
+                _ = _notificationService.SendNotificationAsync(request.RecipientId, "New message", messageContent);
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(request.RecipientId, currentUserAbuneId);
@@ -974,8 +975,8 @@ namespace coptic_app_backend.Api.Controllers
                 // Update conversation with the reply
                 await _chatService.UpdateConversationForMessageAsync(replyMessage);
 
-                // Send real-time WebSocket notification to recipient
-                await _hubContext.Clients.Group(recipientId).SendAsync("ReceiveMessage", new
+                // FCM-only (still emit to WS if connected, harmless)
+                _ = _hubContext.Clients.Group(recipientId).SendAsync("ReceiveMessage", new
                 {
                     id = replyMessage.Id,
                     senderId = replyMessage.SenderId,
@@ -993,8 +994,8 @@ namespace coptic_app_backend.Api.Controllers
                     originalMessageId = request.OriginalMessageId
                 });
 
-                // Send delivery confirmation to sender
-                await _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", replyMessage.Id, recipientId);
+                _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", replyMessage.Id, recipientId);
+                _ = _notificationService.SendNotificationAsync(recipientId, "New message", replyMessage.Content);
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(recipientId, currentUserAbuneId);
