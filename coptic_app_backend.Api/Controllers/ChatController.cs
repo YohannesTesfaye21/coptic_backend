@@ -958,15 +958,13 @@ namespace coptic_app_backend.Api.Controllers
                 // Determine recipient (opposite of original sender)
                 string recipientId = originalMessage.SenderId == currentUserId ? originalMessage.RecipientId : originalMessage.SenderId;
 
-                // Create reply content with reference to original message
-                string replyContent = $"Replying to: {originalMessage.Content}\n\n{request.Content}";
-
-                // Send the reply message
-                var replyMessage = await _chatService.SendMessageAsync(
+                // Send the reply message using the proper reply method
+                var replyMessage = await _chatService.ReplyToMessageAsync(
                     currentUserId,
                     recipientId,
                     currentUserAbuneId,
-                    replyContent,
+                    request.Content,
+                    request.OriginalMessageId,
                     MessageType.Text
                 );
 
@@ -987,6 +985,7 @@ namespace coptic_app_backend.Api.Controllers
                     fileSize = replyMessage.FileSize,
                     fileType = replyMessage.FileType,
                     voiceDuration = replyMessage.VoiceDuration,
+                    replyToMessageId = replyMessage.ReplyToMessageId,
                     isReply = true,
                     originalMessageId = request.OriginalMessageId
                 });
@@ -1010,6 +1009,7 @@ namespace coptic_app_backend.Api.Controllers
                     fileSize = replyMessage.FileSize,
                     fileType = replyMessage.FileType,
                     voiceDuration = replyMessage.VoiceDuration,
+                    replyToMessageId = replyMessage.ReplyToMessageId,
                     isReply = true,
                     originalMessageId = request.OriginalMessageId
                 });
