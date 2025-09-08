@@ -10,6 +10,7 @@ namespace coptic_app_backend.Domain.Interfaces
         // Message operations
         Task<ChatMessage> CreateMessageAsync(ChatMessage message);
         Task<ChatMessage?> GetMessageByIdAsync(string messageId);
+        Task<ChatMessage?> GetMessageByIdIncludingDeletedAsync(string messageId);
         Task<List<ChatMessage>> GetMessagesByConversationAsync(string participant1Id, string participant2Id, string abuneId, int limit = 50, long? beforeTimestamp = null);
         Task<List<ChatMessage>> GetBroadcastMessagesAsync(string abuneId, int limit = 50, long? beforeTimestamp = null);
         Task<bool> UpdateMessageAsync(ChatMessage message);

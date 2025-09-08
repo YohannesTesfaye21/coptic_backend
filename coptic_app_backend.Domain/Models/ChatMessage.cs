@@ -114,6 +114,21 @@ namespace coptic_app_backend.Domain.Models
         public string? DeletedBy { get; set; }
         
         /// <summary>
+        /// Whether message was edited
+        /// </summary>
+        public bool IsEdited { get; set; } = false;
+        
+        /// <summary>
+        /// Edit timestamp
+        /// </summary>
+        public long? EditedAt { get; set; }
+        
+        /// <summary>
+        /// User who edited the message
+        /// </summary>
+        public string? EditedBy { get; set; }
+        
+        /// <summary>
         /// Navigation properties for Entity Framework
         /// </summary>
         public User? Sender { get; set; }

@@ -920,7 +920,10 @@ namespace coptic_app_backend.Api.Controllers
                     fileName = editedMessage.FileName,
                     fileSize = editedMessage.FileSize,
                     fileType = editedMessage.FileType,
-                    voiceDuration = editedMessage.VoiceDuration
+                    voiceDuration = editedMessage.VoiceDuration,
+                    isEdited = editedMessage.IsEdited,
+                    editedAt = editedMessage.EditedAt,
+                    editedBy = editedMessage.EditedBy
                 });
             }
             catch (Exception ex)

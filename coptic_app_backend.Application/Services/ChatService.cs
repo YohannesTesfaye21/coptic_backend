@@ -166,9 +166,12 @@ namespace coptic_app_backend.Application.Services
                 throw new InvalidOperationException("Message is too old to edit");
             }
 
-            // Update message content
+            // Update message content - keep original timestamp, add edited timestamp
             message.Content = newContent;
-            message.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            message.IsEdited = true;
+            message.EditedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            message.EditedBy = userId;
+            // Don't update the original timestamp - this keeps the message in its original position
 
             var success = await _chatRepository.UpdateMessageAsync(message);
             return success ? message : null;
@@ -239,11 +242,15 @@ namespace coptic_app_backend.Application.Services
             }
 
             // Validate reply message exists and is in the same community
-            var replyToMessage = await _chatRepository.GetMessageByIdAsync(replyToMessageId);
+            // Use the method that includes deleted messages to check if the original message was deleted
+            var replyToMessage = await _chatRepository.GetMessageByIdIncludingDeletedAsync(replyToMessageId);
             if (replyToMessage == null || replyToMessage.AbuneId != abuneId)
             {
                 throw new ArgumentException("Reply message not found or invalid");
             }
+
+            // Note: We allow replying to deleted messages since replies will be converted to normal messages
+            // when the original message is deleted, so this maintains conversation flow
 
             // Ensure the reply is in the same conversation as the original message
             var message = new ChatMessage
@@ -272,11 +279,15 @@ namespace coptic_app_backend.Application.Services
             }
 
             // Validate forward message exists and is in the same community
-            var forwardFromMessage = await _chatRepository.GetMessageByIdAsync(forwardFromMessageId);
+            // Use the method that includes deleted messages to check if the original message was deleted
+            var forwardFromMessage = await _chatRepository.GetMessageByIdIncludingDeletedAsync(forwardFromMessageId);
             if (forwardFromMessage == null || forwardFromMessage.AbuneId != abuneId)
             {
                 throw new ArgumentException("Forward message not found or invalid");
             }
+
+            // Note: We allow forwarding deleted messages since the content is still preserved
+            // and this maintains conversation flow
 
             var message = new ChatMessage
             {

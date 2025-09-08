@@ -58,6 +58,12 @@ namespace coptic_app_backend.Infrastructure.Repositories
                 .FirstOrDefaultAsync(m => m.Id == messageId && !m.IsDeleted);
         }
 
+        public async Task<ChatMessage?> GetMessageByIdIncludingDeletedAsync(string messageId)
+        {
+            return await _context.ChatMessages
+                .FirstOrDefaultAsync(m => m.Id == messageId);
+        }
+
         public async Task<List<ChatMessage>> GetMessagesByConversationAsync(string participant1Id, string participant2Id, string abuneId, int limit = 50, long? beforeTimestamp = null)
         {
             var query = _context.ChatMessages
@@ -106,6 +112,9 @@ namespace coptic_app_backend.Infrastructure.Repositories
             existingMessage.VoiceDuration = message.VoiceDuration;
             existingMessage.Reactions = message.Reactions;
             existingMessage.Status = message.Status;
+            existingMessage.IsEdited = message.IsEdited;
+            existingMessage.EditedAt = message.EditedAt;
+            existingMessage.EditedBy = message.EditedBy;
 
             await _context.SaveChangesAsync();
             return true;
@@ -116,9 +125,21 @@ namespace coptic_app_backend.Infrastructure.Repositories
             var message = await _context.ChatMessages.FindAsync(messageId);
             if (message == null) return false;
 
+            // Mark the original message as deleted
             message.IsDeleted = true;
             message.DeletedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             message.DeletedBy = deletedBy;
+
+            // Find all replies to this message and convert them to normal messages
+            var replies = await _context.ChatMessages
+                .Where(m => m.ReplyToMessageId == messageId && !m.IsDeleted)
+                .ToListAsync();
+
+            foreach (var reply in replies)
+            {
+                // Convert reply to normal message by removing the ReplyToMessageId reference
+                reply.ReplyToMessageId = null;
+            }
 
             await _context.SaveChangesAsync();
             return true;
