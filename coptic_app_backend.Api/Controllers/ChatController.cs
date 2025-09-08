@@ -65,7 +65,7 @@ namespace coptic_app_backend.Api.Controllers
                 // FCM-only (still emit to WS if connected, harmless)
                 _ = _hubContext.Clients.Group(request.RecipientId).SendAsync("ReceiveMessage", message);
                 _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
-                _ = _notificationService.SendNotificationAsync(request.RecipientId, "New message", message.Content);
+                await _notificationService.SendNotificationAsync(request.RecipientId, "New message", message.Content);
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(request.RecipientId, currentUserAbuneId);
@@ -167,7 +167,7 @@ namespace coptic_app_backend.Api.Controllers
                 });
 
                 _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
-                _ = _notificationService.SendNotificationAsync(request.RecipientId, "New message", messageContent);
+                await _notificationService.SendNotificationAsync(request.RecipientId, "New message", messageContent);
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(request.RecipientId, currentUserAbuneId);
@@ -995,7 +995,7 @@ namespace coptic_app_backend.Api.Controllers
                 });
 
                 _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", replyMessage.Id, recipientId);
-                _ = _notificationService.SendNotificationAsync(recipientId, "New message", replyMessage.Content);
+                await _notificationService.SendNotificationAsync(recipientId, "New message", replyMessage.Content);
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(recipientId, currentUserAbuneId);

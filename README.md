@@ -23,6 +23,25 @@ The solution follows Clean Architecture with the following projects:
    - AWS Region and Profile
    - FCM Project ID and Service Account JSON
    - Cognito User Pool ID
+### FCM (Server-side) Configuration
+
+Set either environment variables or appsettings keys for FCM v1:
+
+Environment variables:
+
+```
+FCM__ProjectId=coptic-6a5a1
+FCM__ServiceAccountJson=/absolute/path/to/service-account.json
+```
+
+Or JSON value:
+
+```
+FCM__ServiceAccountJson={"type":"service_account",...}
+```
+
+Alternatively, set `GOOGLE_APPLICATION_CREDENTIALS` to the service account JSON path.
+
 
 2. Ensure your AWS credentials are configured with permissions for:
    - DynamoDB (create, read, update, delete tables and items)
