@@ -95,6 +95,12 @@ namespace coptic_app_backend.Api.Migrations
                         .HasMaxLength(450)
                         .HasColumnType("character varying(450)");
 
+                    b.Property<long?>("EditedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("EditedBy")
+                        .HasColumnType("text");
+
                     b.Property<string>("FileName")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -118,6 +124,9 @@ namespace coptic_app_backend.Api.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsEdited")
                         .HasColumnType("boolean");
 
                     b.Property<int>("MessageType")
