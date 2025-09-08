@@ -409,6 +409,21 @@ namespace coptic_app_backend.Infrastructure.Services
                 };
 
                 await _cognitoClient.ConfirmForgotPasswordAsync(confirmForgotPasswordRequest);
+                
+                // Also update the local database password hash to keep them in sync
+                var user = await _userRepository.GetUserByEmailAsync(email);
+                if (user != null)
+                {
+                    var hashedPassword = HashPassword(newPassword);
+                    user.PasswordHash = hashedPassword;
+                    await _userRepository.UpdateUserAsync(user.Id, user);
+                    _logger.LogInformation("Password reset successfully updated in both Cognito and local database for user: {Email}", email);
+                }
+                else
+                {
+                    _logger.LogWarning("Password reset successful in Cognito but user not found in local database: {Email}", email);
+                }
+                
                 return new CognitoResult { IsSuccess = true };
             }
             catch (Exception ex)
