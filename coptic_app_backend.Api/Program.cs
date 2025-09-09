@@ -17,18 +17,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Only initialize Firebase in the Production environment
 if (builder.Environment.IsProduction())
 {
-    // Set up Google Application Credentials from configuration
-    var googleCredentials = builder.Configuration["GOOGLE_APPLICATION_CREDENTIALS"];
-    if (!string.IsNullOrEmpty(googleCredentials))
+    var credentialPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+    if (string.IsNullOrEmpty(credentialPath))
     {
-        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", googleCredentials);
+        // Log or handle the error appropriately if the environment variable is not set
+        throw new InvalidOperationException("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.");
     }
 
-    // Initialize Firebase Admin SDK
-    // The SDK will automatically use the file path from the GOOGLE_APPLICATION_CREDENTIALS environment variable
     FirebaseApp.Create(new AppOptions
     {
-        Credential = GoogleCredential.GetApplicationDefault(),
+        Credential = GoogleCredential.FromFile(credentialPath),
     });
 }
 
