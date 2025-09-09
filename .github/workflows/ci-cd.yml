@@ -93,6 +93,21 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Prepare Firebase files from secrets
+      shell: bash
+      run: |
+        set -e
+        mkdir -p firebase
+        if [ -n "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" ]; then
+          printf '%s' "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > firebase/service-account.json
+        fi
+        if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+          printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" > firebase/google-services.json
+        fi
+        if [ -n "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" ]; then
+          printf '%s' "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" > firebase/GoogleService-Info.plist
+        fi
+
     - name: Upload deployment files to server
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -100,7 +115,7 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         port: ${{ secrets.SERVER_PORT || '22' }}
-        source: "docker-compose.prod.yml,env.production,nginx-simple.conf"
+        source: "docker-compose.prod.yml,env.production,nginx-simple.conf,firebase/*"
         target: ~/coptic-app-backend/
 
     - name: Deploy to production server
@@ -146,39 +161,19 @@ jobs:
             cp env.production ~/coptic-app-backend/
           fi
           
-          # Create Firebase credentials directory
+          # Create Firebase credentials directory and move uploaded files
           echo "🔥 Setting up Firebase credentials..."
           mkdir -p ~/coptic-app-backend/firebase
-          
-          # Create Firebase service account JSON file (use heredoc to preserve newlines)
-          if [ ! -z "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" ]; then
-            cat > ~/coptic-app-backend/firebase/service-account.json << 'JSON_EOF'
-            ${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
-            JSON_EOF
+          if [ -f "firebase/service-account.json" ]; then
+            mv -f firebase/service-account.json ~/coptic-app-backend/firebase/service-account.json
             chmod 600 ~/coptic-app-backend/firebase/service-account.json
             echo "✅ Firebase service account created"
-          else
-            echo "⚠️  FCM_SERVICE_ACCOUNT_JSON secret not found"
           fi
-          
-          # Create google-services.json for Android (if provided)
-          if [ ! -z "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
-            cat > ~/coptic-app-backend/firebase/google-services.json << 'GS_EOF'
-            ${{ secrets.GOOGLE_SERVICES_JSON }}
-            GS_EOF
-            echo "✅ Android google-services.json created"
-          else
-            echo "⚠️  GOOGLE_SERVICES_JSON secret not found"
+          if [ -f "firebase/google-services.json" ]; then
+            mv -f firebase/google-services.json ~/coptic-app-backend/firebase/google-services.json
           fi
-          
-          # Create GoogleService-Info.plist for iOS (if provided)
-          if [ ! -z "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" ]; then
-            cat > ~/coptic-app-backend/firebase/GoogleService-Info.plist << 'PLIST_EOF'
-            ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
-            PLIST_EOF
-            echo "✅ iOS GoogleService-Info.plist created"
-          else
-            echo "⚠️  GOOGLE_SERVICE_INFO_PLIST secret not found"
+          if [ -f "firebase/GoogleService-Info.plist" ]; then
+            mv -f firebase/GoogleService-Info.plist ~/coptic-app-backend/firebase/GoogleService-Info.plist
           fi
 
           # Copy environment file
