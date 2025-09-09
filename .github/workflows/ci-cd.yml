@@ -153,8 +153,8 @@ jobs:
           # Create Firebase service account JSON file (use heredoc to preserve newlines)
           if [ ! -z "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" ]; then
             cat > ~/coptic-app-backend/firebase/service-account.json << 'JSON_EOF'
-${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
-JSON_EOF
+            ${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
+            JSON_EOF
             chmod 600 ~/coptic-app-backend/firebase/service-account.json
             echo "✅ Firebase service account created"
           else
@@ -164,8 +164,8 @@ JSON_EOF
           # Create google-services.json for Android (if provided)
           if [ ! -z "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
             cat > ~/coptic-app-backend/firebase/google-services.json << 'GS_EOF'
-${{ secrets.GOOGLE_SERVICES_JSON }}
-GS_EOF
+            ${{ secrets.GOOGLE_SERVICES_JSON }}
+            GS_EOF
             echo "✅ Android google-services.json created"
           else
             echo "⚠️  GOOGLE_SERVICES_JSON secret not found"
@@ -174,8 +174,8 @@ GS_EOF
           # Create GoogleService-Info.plist for iOS (if provided)
           if [ ! -z "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" ]; then
             cat > ~/coptic-app-backend/firebase/GoogleService-Info.plist << 'PLIST_EOF'
-${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
-PLIST_EOF
+            ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+            PLIST_EOF
             echo "✅ iOS GoogleService-Info.plist created"
           else
             echo "⚠️  GOOGLE_SERVICE_INFO_PLIST secret not found"
