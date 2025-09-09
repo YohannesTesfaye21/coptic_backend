@@ -93,8 +93,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Deploy to production server
+    - name: Deploy and Restart Server
       uses: appleboy/ssh-action@v1.0.3
+      env:
+        FCM_JSON: ${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
+        GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        GOOGLE_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+        PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
@@ -102,31 +107,26 @@ jobs:
         port: ${{ secrets.SERVER_PORT || '22' }}
         script: |
           set -e
-          echo "🚀 Starting robust deployment..."
+          echo "🚀 Starting final, robust deployment..."
           DEPLOY_DIR="/root/coptic-app-backend"
           
-          # 1. Ensure base directory exists
+          # 1. Ensure directories exist
           mkdir -p $DEPLOY_DIR/firebase
           cd $DEPLOY_DIR
           
-          # 2. Reliably write Firebase credentials from secrets
-          echo "🔥 Writing Firebase service account file..."
-          printf '%s' "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > $DEPLOY_DIR/firebase/service-account.json
-          printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" > $DEPLOY_DIR/firebase/google-services.json
-          printf '%s' "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" > $DEPLOY_DIR/firebase/GoogleService-Info.plist
+          # 2. Write credential files from environment variables
+          echo "🔥 Writing Firebase credential files from env..."
+          printf '%s' "$FCM_JSON" > $DEPLOY_DIR/firebase/service-account.json
+          printf '%s' "$GOOGLE_SERVICES" > $DEPLOY_DIR/firebase/google-services.json
+          printf '%s' "$GOOGLE_PLIST" > $DEPLOY_DIR/firebase/GoogleService-Info.plist
           chmod 600 $DEPLOY_DIR/firebase/service-account.json
           echo "✅ Firebase files created."
           ls -la $DEPLOY_DIR/firebase
 
-          # 3. Authenticate with GitHub Container Registry
-          echo "🔐 Authenticating with GitHub Container Registry..."
-          echo "${{ secrets.PAT_TOKEN }}" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
-          
-          # 4. Pull latest image and restart services
-          echo "🐳 Pulling latest Docker image..."
+          # 3. Authenticate & Restart Docker
+          echo "🔐 Authenticating and restarting services..."
+          echo "$PAT_TOKEN" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
           docker-compose -f docker-compose.prod.yml pull
-          
-          echo "🛑 Stopping and restarting services..."
           docker-compose -f docker-compose.prod.yml down
           docker-compose -f docker-compose.prod.yml up -d
           
