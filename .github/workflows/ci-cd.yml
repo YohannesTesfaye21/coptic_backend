@@ -93,31 +93,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Prepare Firebase files from secrets
-      shell: bash
-      run: |
-        set -e
-        mkdir -p firebase
-        if [ -n "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" ]; then
-          printf '%s' "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > firebase/service-account.json
-        fi
-        if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
-          printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" > firebase/google-services.json
-        fi
-        if [ -n "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" ]; then
-          printf '%s' "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" > firebase/GoogleService-Info.plist
-        fi
-
-    - name: Upload deployment files to server
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        port: ${{ secrets.SERVER_PORT || '22' }}
-        source: "docker-compose.prod.yml,env.production,nginx-simple.conf,firebase"
-        target: ~/coptic-app-backend/
-
     - name: Deploy to production server
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -125,158 +100,37 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         port: ${{ secrets.SERVER_PORT || '22' }}
-
         script: |
-          echo "🚀 Starting deployment..."
+          set -e
+          echo "🚀 Starting robust deployment..."
+          DEPLOY_DIR="/root/coptic-app-backend"
           
-          # Ensure SSH access is preserved in firewall
-          echo "🛡️  Configuring firewall safely..."
-          ufw allow ssh || ufw allow 22/tcp
-          ufw allow 80/tcp
-          ufw allow 443/tcp
-          ufw allow 5000/tcp
-          ufw --force enable
+          # 1. Ensure base directory exists
+          mkdir -p $DEPLOY_DIR/firebase
+          cd $DEPLOY_DIR
           
-          # Verify SSH is still accessible
-          echo "🔍 Verifying SSH access..."
-          ufw status | grep -E "(22|ssh)" || echo "⚠️  SSH port not found in firewall rules"
-          
-          # Create app directory if it doesn't exist
-          mkdir -p ~/coptic-app-backend
-          cd ~/coptic-app-backend
-          
-          # Authenticate with GitHub Container Registry
+          # 2. Reliably write Firebase credentials from secrets
+          echo "🔥 Writing Firebase service account file..."
+          printf '%s' "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > $DEPLOY_DIR/firebase/service-account.json
+          printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" > $DEPLOY_DIR/firebase/google-services.json
+          printf '%s' "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" > $DEPLOY_DIR/firebase/GoogleService-Info.plist
+          chmod 600 $DEPLOY_DIR/firebase/service-account.json
+          echo "✅ Firebase files created."
+          ls -la $DEPLOY_DIR/firebase
+
+          # 3. Authenticate with GitHub Container Registry
           echo "🔐 Authenticating with GitHub Container Registry..."
           echo "${{ secrets.PAT_TOKEN }}" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
           
-          # Copy necessary files to server
-          echo "📁 Copying deployment files..."
-          if [ -f "docker-compose.prod.yml" ]; then
-            cp docker-compose.prod.yml ~/coptic-app-backend/
-          fi
-          if [ -f "nginx-simple.conf" ]; then
-            cp nginx-simple.conf ~/coptic-app-backend/
-          fi
-          if [ -f "env.production" ]; then
-            cp env.production ~/coptic-app-backend/
-          fi
-          
-          # Ensure Firebase credentials directory exists (files are already uploaded via SCP)
-          echo "🔥 Setting up Firebase credentials..."
-          mkdir -p ~/coptic-app-backend/firebase
-          if [ -f "firebase/service-account.json" ]; then
-            chmod 600 firebase/service-account.json
-            echo "✅ Firebase service account present"
-          else
-            echo "⚠️  firebase/service-account.json missing after upload"
-          fi
-          ls -la firebase || true
-
-          # Copy environment file
-          echo "📋 Setting up environment..."
-          if [ -f "$HOME/coptic-app-backend/env.production" ]; then
-            cp $HOME/coptic-app-backend/env.production .env
-            echo "✅ Using env.production template"
-            # Substitute environment variables from GitHub Secrets
-            sed -i "s/\${AWS_ACCESS_KEY_ID}/${{ secrets.AWS_ACCESS_KEY_ID }}/g" .env
-            sed -i "s/\${AWS_SECRET_ACCESS_KEY}/${{ secrets.AWS_SECRET_ACCESS_KEY }}/g" .env
-            sed -i "s/\${AWS_REGION}/${{ secrets.AWS_REGION }}/g" .env
-            sed -i "s/\${COGNITO_USER_POOL_ID}/${{ secrets.COGNITO_USER_POOL_ID }}/g" .env
-            sed -i "s/\${COGNITO_CLIENT_ID}/${{ secrets.COGNITO_CLIENT_ID }}/g" .env
-            # Firebase configuration
-            sed -i "s/\${FCM_PROJECT_ID}/${{ secrets.FCM_PROJECT_ID }}/g" .env
-          else
-            echo "⚠️  env.production not found, creating basic .env"
-            echo "# Database Configuration" > .env
-            echo "POSTGRES_DB=coptic_app" >> .env
-            echo "POSTGRES_USER=coptic_user" >> .env
-            echo "POSTGRES_PASSWORD=your_secure_password_here" >> .env
-            echo "" >> .env
-            echo "# JWT Configuration" >> .env
-            echo "JWT_KEY=this-is-a-very-long-secret-key-for-jwt-signing-that-is-at-least-64-characters-long-for-security" >> .env
-            echo "JWT_ISSUER=coptic-app-backend" >> .env
-            echo "JWT_AUDIENCE=coptic-app-frontend" >> .env
-            echo "JWT_EXPIRY_HOURS=24" >> .env
-            echo "" >> .env
-            echo "# Redis Configuration" >> .env
-            echo "REDIS_PASSWORD=your_redis_password_here" >> .env
-            echo "" >> .env
-            echo "# Application Configuration" >> .env
-            echo "ASPNETCORE_ENVIRONMENT=Production" >> .env
-            echo "" >> .env
-            echo "# AWS Cognito Configuration" >> .env
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
-            echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
-            echo "COGNITO_USER_POOL_ID=${{ secrets.COGNITO_USER_POOL_ID }}" >> .env
-            echo "COGNITO_CLIENT_ID=${{ secrets.COGNITO_CLIENT_ID }}" >> .env
-            echo "" >> .env
-            echo "# Firebase FCM Configuration" >> .env
-            echo "FCM__ProjectId=${{ secrets.FCM_PROJECT_ID }}" >> .env
-            echo "FCM__ServiceAccountJson=/app/firebase/service-account.json" >> .env
-          fi
-          
-          # Pull latest changes if git repo exists
-          if [ -d ".git" ]; then
-            echo "📥 Pulling latest changes..."
-            git pull origin main
-          else
-            echo "📁 No git repo found, continuing with deployment"
-          fi
-          
-          # Re-authenticate before pulling images to ensure permissions persist
-          echo "🔐 Re-authenticating with GitHub Container Registry..."
-          echo "${{ secrets.PAT_TOKEN }}" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
-          
-          # Pull latest Docker images
-          echo "🐳 Pulling latest Docker images..."
+          # 4. Pull latest image and restart services
+          echo "🐳 Pulling latest Docker image..."
           docker-compose -f docker-compose.prod.yml pull
           
-          # Stop existing services
-          echo "🛑 Stopping existing services..."
+          echo "🛑 Stopping and restarting services..."
           docker-compose -f docker-compose.prod.yml down
-          
-          # Start services with new images (ensure we are in the directory with docker-compose.prod.yml)
-          echo "🚀 Starting services..."
           docker-compose -f docker-compose.prod.yml up -d
           
-          # Wait for services to be healthy
-          echo "⏳ Waiting for services to start..."
-          sleep 30
-          
-          # Check service status
-          echo "🔍 Checking service status..."
-          docker-compose -f docker-compose.prod.yml ps
-          
-          # Run database migrations if needed
-          echo "🗄️  Running database migrations..."
-          docker-compose -f docker-compose.prod.yml exec -T api dotnet ef database update || echo "Migrations completed or no migrations needed"
-          
-          # Configure Nginx if needed
-          echo "🌐 Configuring Nginx..."
-          if ! command -v nginx &> /dev/null; then
-            echo "📦 Installing Nginx..."
-            apt update && apt install -y nginx
-          fi
-          
-          if [ ! -f /etc/nginx/sites-enabled/coptic-app ]; then
-            echo "📝 Setting up Nginx configuration..."
-            if [ -f "nginx-simple.conf" ]; then
-              cp nginx-simple.conf /etc/nginx/sites-available/coptic-app
-              ln -sf /etc/nginx/sites-available/coptic-app /etc/nginx/sites-enabled/
-              nginx -t && systemctl reload nginx
-            else
-              echo "⚠️  nginx-simple.conf not found, skipping Nginx setup"
-            fi
-          fi
-          
-          echo "📄 Firebase files on host:"
-          ls -la ~/coptic-app-backend/firebase/ || true
-          echo "✅ Deployment completed successfully!"
-          echo "🌐 Your app should be accessible at:"
-          echo "   - Direct: http://${{ secrets.SERVER_HOST }}:5000"
-          echo "   - Proxy: http://${{ secrets.SERVER_HOST }}"
-          echo "   - Swagger: http://${{ secrets.SERVER_HOST }}/swagger"
+          echo "✅ Deployment complete."
 
     - name: Health check
       run: |
