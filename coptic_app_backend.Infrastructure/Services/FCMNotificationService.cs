@@ -23,6 +23,13 @@ namespace coptic_app_backend.Infrastructure.Services
         {
             try
             {
+                // Guard against null or empty title/body
+                if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(body))
+                {
+                    _logger.LogWarning("Title or Body is null/empty for notification to user: {UserId}", userId);
+                    return false;
+                }
+                
                 _logger.LogInformation("Sending notification to user: {UserId}, title: {Title}", userId, title);
 
                 var user = await _userRepository.GetUserByIdAsync(userId);
@@ -54,6 +61,12 @@ namespace coptic_app_backend.Infrastructure.Services
                     }
                 };
 
+                if (FirebaseMessaging.DefaultInstance == null)
+                {
+                    _logger.LogError("FirebaseApp was not initialized. Cannot send notification.");
+                    return false;
+                }
+                
                 var response = await FirebaseMessaging.DefaultInstance.SendAsync(message);
                 _logger.LogInformation("Successfully sent message: " + response);
                 return true;

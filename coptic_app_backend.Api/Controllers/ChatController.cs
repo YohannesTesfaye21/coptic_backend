@@ -65,7 +65,9 @@ namespace coptic_app_backend.Api.Controllers
                 // FCM-only (still emit to WS if connected, harmless)
                 _ = _hubContext.Clients.Group(request.RecipientId).SendAsync("ReceiveMessage", message);
                 _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
-                await _notificationService.SendNotificationAsync(request.RecipientId, "New message", message.Content);
+                
+                var notificationBody = string.IsNullOrEmpty(message.Content) ? "New message received" : message.Content;
+                await _notificationService.SendNotificationAsync(request.RecipientId, "New message", notificationBody);
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(request.RecipientId, currentUserAbuneId);
@@ -167,7 +169,9 @@ namespace coptic_app_backend.Api.Controllers
                 });
 
                 _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
-                await _notificationService.SendNotificationAsync(request.RecipientId, "New message", messageContent);
+
+                var notificationBodyWithFile = string.IsNullOrEmpty(messageContent) ? "Sent an attachment" : messageContent;
+                await _notificationService.SendNotificationAsync(request.RecipientId, "New message", notificationBodyWithFile);
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(request.RecipientId, currentUserAbuneId);
@@ -995,7 +999,9 @@ namespace coptic_app_backend.Api.Controllers
                 });
 
                 _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", replyMessage.Id, recipientId);
-                await _notificationService.SendNotificationAsync(recipientId, "New message", replyMessage.Content);
+                
+                var replyNotificationBody = string.IsNullOrEmpty(replyMessage.Content) ? "Sent a reply" : replyMessage.Content;
+                await _notificationService.SendNotificationAsync(recipientId, "New message", replyNotificationBody);
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(recipientId, currentUserAbuneId);
