@@ -26,8 +26,24 @@ namespace coptic_app_backend.Infrastructure.Services
         public FCMNotificationService(HttpClient httpClient, IConfiguration configuration, IUserRepository userRepository, ILogger<FCMNotificationService> logger)
         {
             _httpClient = httpClient;
-            _fcmProjectId = configuration["FCM:ProjectId"] ?? "";
-            _fcmServiceAccountJson = configuration["FCM:ServiceAccountJson"] ?? "";
+
+            // Be resilient to different environment variable formats set by CI/CD and docker-compose
+            _fcmProjectId =
+                configuration["FCM:ProjectId"]
+                ?? configuration["FCM__ProjectId"]
+                ?? configuration["FCM_PROJECT_ID"]
+                ?? Environment.GetEnvironmentVariable("FCM__ProjectId")
+                ?? Environment.GetEnvironmentVariable("FCM_PROJECT_ID")
+                ?? string.Empty;
+
+            _fcmServiceAccountJson =
+                configuration["FCM:ServiceAccountJson"]
+                ?? configuration["FCM__ServiceAccountJson"]
+                ?? configuration["FCM_SERVICE_ACCOUNT_JSON"]
+                ?? Environment.GetEnvironmentVariable("FCM__ServiceAccountJson")
+                ?? Environment.GetEnvironmentVariable("FCM_SERVICE_ACCOUNT_JSON")
+                ?? string.Empty;
+
             _userRepository = userRepository;
             _logger = logger;
             
