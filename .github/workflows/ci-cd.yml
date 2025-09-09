@@ -115,7 +115,7 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         port: ${{ secrets.SERVER_PORT || '22' }}
-        source: "docker-compose.prod.yml,env.production,nginx-simple.conf,firebase/*"
+        source: "docker-compose.prod.yml,env.production,nginx-simple.conf,firebase"
         target: ~/coptic-app-backend/
 
     - name: Deploy to production server
@@ -161,20 +161,16 @@ jobs:
             cp env.production ~/coptic-app-backend/
           fi
           
-          # Create Firebase credentials directory and move uploaded files
+          # Ensure Firebase credentials directory exists (files are already uploaded via SCP)
           echo "🔥 Setting up Firebase credentials..."
           mkdir -p ~/coptic-app-backend/firebase
           if [ -f "firebase/service-account.json" ]; then
-            mv -f firebase/service-account.json ~/coptic-app-backend/firebase/service-account.json
-            chmod 600 ~/coptic-app-backend/firebase/service-account.json
-            echo "✅ Firebase service account created"
+            chmod 600 firebase/service-account.json
+            echo "✅ Firebase service account present"
+          else
+            echo "⚠️  firebase/service-account.json missing after upload"
           fi
-          if [ -f "firebase/google-services.json" ]; then
-            mv -f firebase/google-services.json ~/coptic-app-backend/firebase/google-services.json
-          fi
-          if [ -f "firebase/GoogleService-Info.plist" ]; then
-            mv -f firebase/GoogleService-Info.plist ~/coptic-app-backend/firebase/GoogleService-Info.plist
-          fi
+          ls -la firebase || true
 
           # Copy environment file
           echo "📋 Setting up environment..."
