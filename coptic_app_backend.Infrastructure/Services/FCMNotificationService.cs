@@ -30,6 +30,11 @@ namespace coptic_app_backend.Infrastructure.Services
             _fcmServiceAccountJson = configuration["FCM:ServiceAccountJson"] ?? "";
             _userRepository = userRepository;
             _logger = logger;
+            
+            // Debug logging to see what configuration values we're getting
+            _logger.LogInformation("FCM Configuration - ProjectId: '{ProjectId}', ServiceAccountJson: '{ServiceAccountJson}'", 
+                string.IsNullOrEmpty(_fcmProjectId) ? "[EMPTY]" : _fcmProjectId,
+                string.IsNullOrEmpty(_fcmServiceAccountJson) ? "[EMPTY]" : _fcmServiceAccountJson);
         }
 
         private async Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default)
@@ -44,14 +49,19 @@ namespace coptic_app_backend.Infrastructure.Services
                 GoogleCredential credential;
                 if (!string.IsNullOrWhiteSpace(_fcmServiceAccountJson) && _fcmServiceAccountJson.TrimStart().StartsWith("{"))
                 {
+                    _logger.LogInformation("Using FCM credentials from JSON content");
                     credential = GoogleCredential.FromJson(_fcmServiceAccountJson);
                 }
                 else if (!string.IsNullOrWhiteSpace(_fcmServiceAccountJson))
                 {
+                    _logger.LogInformation("Using FCM credentials from file: {FilePath}", _fcmServiceAccountJson);
                     credential = GoogleCredential.FromFile(_fcmServiceAccountJson);
                 }
                 else
                 {
+                    _logger.LogWarning("No FCM credentials configured. ProjectId: '{ProjectId}', ServiceAccountJson: '{ServiceAccountJson}'. Falling back to Application Default Credentials.", 
+                        string.IsNullOrEmpty(_fcmProjectId) ? "[EMPTY]" : _fcmProjectId,
+                        string.IsNullOrEmpty(_fcmServiceAccountJson) ? "[EMPTY]" : _fcmServiceAccountJson);
                     credential = await GoogleCredential.GetApplicationDefaultAsync(cancellationToken);
                 }
 
