@@ -18,16 +18,18 @@ var builder = WebApplication.CreateBuilder(args);
 if (builder.Environment.IsProduction())
 {
     var credentialPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
-    if (string.IsNullOrEmpty(credentialPath))
+    if (string.IsNullOrEmpty(credentialPath) || !File.Exists(credentialPath))
     {
-        // Log or handle the error appropriately if the environment variable is not set
-        throw new InvalidOperationException("GOOGLE_APPLICATION_CREDENTIALS environment variable not set.");
+        Console.WriteLine($"[Firebase Init] Skipping Firebase initialization. Path not found: {credentialPath}");
     }
-
-    FirebaseApp.Create(new AppOptions
+    else
     {
-        Credential = GoogleCredential.FromFile(credentialPath),
-    });
+        FirebaseApp.Create(new AppOptions
+        {
+            Credential = GoogleCredential.FromFile(credentialPath),
+        });
+        Console.WriteLine("[Firebase Init] Firebase initialized successfully!");
+    }
 }
 
 // Add services to the container.
