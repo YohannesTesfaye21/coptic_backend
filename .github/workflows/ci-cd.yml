@@ -150,9 +150,12 @@ jobs:
           echo "🔥 Setting up Firebase credentials..."
           mkdir -p ~/coptic-app-backend/firebase
           
-          # Create Firebase service account JSON file
+          # Create Firebase service account JSON file (use heredoc to preserve newlines)
           if [ ! -z "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" ]; then
-            echo '${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}' > ~/coptic-app-backend/firebase/service-account.json
+            cat > ~/coptic-app-backend/firebase/service-account.json << 'JSON_EOF'
+${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
+JSON_EOF
+            chmod 600 ~/coptic-app-backend/firebase/service-account.json
             echo "✅ Firebase service account created"
           else
             echo "⚠️  FCM_SERVICE_ACCOUNT_JSON secret not found"
@@ -160,7 +163,9 @@ jobs:
           
           # Create google-services.json for Android (if provided)
           if [ ! -z "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
-            echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > ~/coptic-app-backend/firebase/google-services.json
+            cat > ~/coptic-app-backend/firebase/google-services.json << 'GS_EOF'
+${{ secrets.GOOGLE_SERVICES_JSON }}
+GS_EOF
             echo "✅ Android google-services.json created"
           else
             echo "⚠️  GOOGLE_SERVICES_JSON secret not found"
@@ -168,7 +173,9 @@ jobs:
           
           # Create GoogleService-Info.plist for iOS (if provided)
           if [ ! -z "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" ]; then
-            echo '${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}' > ~/coptic-app-backend/firebase/GoogleService-Info.plist
+            cat > ~/coptic-app-backend/firebase/GoogleService-Info.plist << 'PLIST_EOF'
+${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+PLIST_EOF
             echo "✅ iOS GoogleService-Info.plist created"
           else
             echo "⚠️  GOOGLE_SERVICE_INFO_PLIST secret not found"
@@ -238,7 +245,7 @@ jobs:
           echo "🛑 Stopping existing services..."
           docker-compose -f docker-compose.prod.yml down
           
-          # Start services with new images
+          # Start services with new images (ensure we are in the directory with docker-compose.prod.yml)
           echo "🚀 Starting services..."
           docker-compose -f docker-compose.prod.yml up -d
           
@@ -272,6 +279,8 @@ jobs:
             fi
           fi
           
+          echo "📄 Firebase files on host:"
+          ls -la ~/coptic-app-backend/firebase/ || true
           echo "✅ Deployment completed successfully!"
           echo "🌐 Your app should be accessible at:"
           echo "   - Direct: http://${{ secrets.SERVER_HOST }}:5000"
