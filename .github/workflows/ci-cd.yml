@@ -100,10 +100,7 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         port: ${{ secrets.SERVER_PORT || '22' }}
-        source: |
-          docker-compose.prod.yml
-          env.production
-          nginx-simple.conf
+        source: "docker-compose.prod.yml,env.production,nginx-simple.conf"
         target: ~/coptic-app-backend/
 
     - name: Deploy to production server
