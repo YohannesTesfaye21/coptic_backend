@@ -125,6 +125,10 @@ jobs:
 
           # 3. Authenticate & Restart Docker
           echo "🔐 Authenticating and restarting services..."
+          if [ -z "$PAT_TOKEN" ]; then
+            echo "::error:: The PAT_TOKEN secret is missing or empty. Please check your repository secrets."
+            exit 1
+          fi
           echo "$PAT_TOKEN" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
           docker-compose -f docker-compose.prod.yml pull
           docker-compose -f docker-compose.prod.yml down
