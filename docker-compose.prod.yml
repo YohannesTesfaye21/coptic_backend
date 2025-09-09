@@ -48,8 +48,8 @@ services:
       - FCM__ProjectId=${FCM_PROJECT_ID}
       - FCM__ServiceAccountJson=/app/firebase/service-account.json
     volumes:
-      - ./uploads:/app/wwwroot/uploads
-      - ./firebase:/app/firebase:ro
+      - /root/coptic-app-backend/uploads:/app/wwwroot/uploads
+      - /root/coptic-app-backend/firebase:/app/firebase:ro
     depends_on:
       postgres:
         condition: service_healthy
