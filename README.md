@@ -109,3 +109,4 @@ The application uses DynamoDB with the following tables:
 
 The application uses dependency injection to maintain loose coupling between layers.
 # Test deployment with GitHub Secrets
+# Firebase credentials configured with GitHub Secrets Tue Sep  9 19:38:13 EAT 2025
