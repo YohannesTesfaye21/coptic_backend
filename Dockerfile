@@ -32,7 +32,11 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Create uploads directory
+# Create uploads and firebase directories
 RUN mkdir -p wwwroot/uploads && chmod 755 wwwroot/uploads
+RUN mkdir -p firebase && chmod 755 firebase
+
+# Note: Firebase credential files will be mounted/copied during deployment via CI/CD
+# The actual files are created by GitHub Actions from secrets
 
 ENTRYPOINT ["dotnet", "coptic_app_backend.Api.dll"]

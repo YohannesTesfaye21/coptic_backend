@@ -44,8 +44,12 @@ services:
       - AWS_REGION=${AWS_REGION}
       - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}
       - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
+      # Firebase FCM Configuration
+      - FCM__ProjectId=${FCM_PROJECT_ID}
+      - FCM__ServiceAccountJson=/app/firebase/service-account.json
     volumes:
       - ./uploads:/app/wwwroot/uploads
+      - ./firebase:/app/firebase:ro
     depends_on:
       postgres:
         condition: service_healthy
