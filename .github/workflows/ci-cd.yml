@@ -177,7 +177,6 @@ jobs:
             sed -i "s/\${COGNITO_CLIENT_ID}/${{ secrets.COGNITO_CLIENT_ID }}/g" .env
             # Firebase configuration
             sed -i "s/\${FCM_PROJECT_ID}/${{ secrets.FCM_PROJECT_ID }}/g" .env
-            sed -i "s|path_to_service_account_json|/app/firebase/service-account.json|g" .env
           else
             echo "⚠️  env.production not found, creating basic .env"
             echo "# Database Configuration" > .env
@@ -205,8 +204,8 @@ jobs:
             echo "COGNITO_CLIENT_ID=${{ secrets.COGNITO_CLIENT_ID }}" >> .env
             echo "" >> .env
             echo "# Firebase FCM Configuration" >> .env
-            echo "FCM_PROJECT_ID=${{ secrets.FCM_PROJECT_ID }}" >> .env
-            echo "FCM_SERVICE_ACCOUNT_JSON=/app/firebase/service-account.json" >> .env
+            echo "FCM__ProjectId=${{ secrets.FCM_PROJECT_ID }}" >> .env
+            echo "FCM__ServiceAccountJson=/app/firebase/service-account.json" >> .env
           fi
           
           # Pull latest changes if git repo exists
