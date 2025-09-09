@@ -19,6 +19,7 @@
     <PackageReference Include="AWSSDK.CognitoIdentityProvider" Version="3.7.400.1" />
     <PackageReference Include="AWSSDK.Core" Version="3.7.400.1" />
     <PackageReference Include="Google.Apis.Auth" Version="1.64.0" />
+    <PackageReference Include="FirebaseAdmin" Version="2.4.0" />
   </ItemGroup>
 
   <ItemGroup>

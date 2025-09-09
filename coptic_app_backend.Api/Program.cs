@@ -9,8 +9,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Initialize Firebase Admin SDK
+// The SDK will automatically use the file path from the GOOGLE_APPLICATION_CREDENTIALS environment variable
+FirebaseApp.Create(new AppOptions
+{
+    Credential = GoogleCredential.GetApplicationDefault()
+});
+
 
 // Add services to the container.
 builder.Services.AddControllers();

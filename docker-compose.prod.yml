@@ -44,9 +44,8 @@ services:
       - AWS_REGION=${AWS_REGION}
       - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}
       - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
-      # Firebase FCM Configuration
-      - FCM__ProjectId=${FCM_PROJECT_ID}
-      - FCM__ServiceAccountJson=/app/firebase/service-account.json
+      # Firebase FCM Configuration - The path to the service account file inside the container
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/firebase/service-account.json
     volumes:
       - /root/coptic-app-backend/uploads:/app/wwwroot/uploads
       - /root/coptic-app-backend/firebase:/app/firebase:ro
