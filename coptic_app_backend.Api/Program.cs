@@ -14,13 +14,23 @@ using Google.Apis.Auth.OAuth2;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Initialize Firebase Admin SDK
-// The SDK will automatically use the file path from the GOOGLE_APPLICATION_CREDENTIALS environment variable
-FirebaseApp.Create(new AppOptions
+// Only initialize Firebase in the Production environment
+if (builder.Environment.IsProduction())
 {
-    Credential = GoogleCredential.GetApplicationDefault()
-});
+    // Set up Google Application Credentials from configuration
+    var googleCredentials = builder.Configuration["GOOGLE_APPLICATION_CREDENTIALS"];
+    if (!string.IsNullOrEmpty(googleCredentials))
+    {
+        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", googleCredentials);
+    }
 
+    // Initialize Firebase Admin SDK
+    // The SDK will automatically use the file path from the GOOGLE_APPLICATION_CREDENTIALS environment variable
+    FirebaseApp.Create(new AppOptions
+    {
+        Credential = GoogleCredential.GetApplicationDefault(),
+    });
+}
 
 // Add services to the container.
 builder.Services.AddControllers();
