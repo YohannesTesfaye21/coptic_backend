@@ -95,11 +95,6 @@ jobs:
 
     - name: Deploy and Restart Server
       uses: appleboy/ssh-action@v1.0.3
-      env:
-        FCM_JSON: ${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}
-        GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        GOOGLE_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
-        PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
@@ -114,22 +109,18 @@ jobs:
           mkdir -p $DEPLOY_DIR/firebase
           cd $DEPLOY_DIR
           
-          # 2. Write credential files from environment variables
-          echo "🔥 Writing Firebase credential files from env..."
-          printf '%s' "$FCM_JSON" > $DEPLOY_DIR/firebase/service-account.json
-          printf '%s' "$GOOGLE_SERVICES" > $DEPLOY_DIR/firebase/google-services.json
-          printf '%s' "$GOOGLE_PLIST" > $DEPLOY_DIR/firebase/GoogleService-Info.plist
+          # 2. Write credential files from secrets
+          echo "🔥 Writing Firebase credential files..."
+          printf '%s' "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > $DEPLOY_DIR/firebase/service-account.json
+          printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" > $DEPLOY_DIR/firebase/google-services.json
+          printf '%s' "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" > $DEPLOY_DIR/firebase/GoogleService-Info.plist
           chmod 600 $DEPLOY_DIR/firebase/service-account.json
           echo "✅ Firebase files created."
           ls -la $DEPLOY_DIR/firebase
 
           # 3. Authenticate & Restart Docker
           echo "🔐 Authenticating and restarting services..."
-          if [ -z "$PAT_TOKEN" ]; then
-            echo "::error:: The PAT_TOKEN secret is missing or empty. Please check your repository secrets."
-            exit 1
-          fi
-          echo "$PAT_TOKEN" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
+          echo "${{ secrets.PAT_TOKEN }}" | docker login ghcr.io -u yohannestesfaye21 --password-stdin
           docker-compose -f docker-compose.prod.yml pull
           docker-compose -f docker-compose.prod.yml down
           docker-compose -f docker-compose.prod.yml up -d
