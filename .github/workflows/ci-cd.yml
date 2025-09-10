@@ -117,23 +117,63 @@ jobs:
           
           # 2. Write credential files from secrets 
           echo "🔥 Writing Firebase credential files..."
-          # Method 1: Try direct echo with sed (most common approach)
-          echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/service-account.json"
+          
+          # Method 1: Handle both escaped newlines (\n) and actual newlines
+          echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" | sed -e 's/\\n/\n/g' -e 's/-----BEGIN PRIVATE KEY-----/-----BEGIN PRIVATE KEY-----/g' -e 's/-----END PRIVATE KEY-----/-----END PRIVATE KEY-----/g' > "$DEPLOY_DIR/firebase/service-account.json"
           echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/google-services.json"
           echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/GoogleService-Info.plist"
           
-          # Method 2: Fallback using a more robust approach
-          # Check if the JSON is valid, if not, try alternative methods
+          # Method 2: If JSON is still invalid, try a more aggressive approach
           if ! jq empty "$DEPLOY_DIR/firebase/service-account.json" 2>/dev/null; then
-            echo "⚠️ JSON validation failed, trying alternative approach..."
-            # Try using printf instead of echo for better handling
-            printf '%s\n' "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/service-account.json"
-            
-            # If still invalid, try without sed (in case the secret already has proper newlines)
-            if ! jq empty "$DEPLOY_DIR/firebase/service-account.json" 2>/dev/null; then
-              echo "⚠️ Trying without sed conversion..."
-              printf '%s\n' "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > "$DEPLOY_DIR/firebase/service-account.json"
-            fi
+            echo "⚠️ JSON validation failed, trying aggressive cleanup..."
+            # Clean up the private key formatting more aggressively
+            echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" | \
+              sed -e 's/\\n/\n/g' \
+                  -e 's/-----BEGIN[[:space:]]*PRIVATE[[:space:]]*KEY-----/-----BEGIN PRIVATE KEY-----/g' \
+                  -e 's/-----END[[:space:]]*PRIVATE[[:space:]]*KEY-----/-----END PRIVATE KEY-----/g' \
+                  -e '/^[[:space:]]*$/d' > "$DEPLOY_DIR/firebase/service-account.json"
+          fi
+          
+          # Method 3: Final fallback - try to reconstruct the JSON properly
+          if ! jq empty "$DEPLOY_DIR/firebase/service-account.json" 2>/dev/null; then
+            echo "⚠️ Trying JSON reconstruction approach..."
+            # Write the secret to a temp file and use Python to fix it
+            echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > /tmp/raw_secret.json
+            python3 -c "
+import json
+import re
+
+# Read the raw secret
+with open('/tmp/raw_secret.json', 'r') as f:
+    content = f.read()
+
+# Try to parse as JSON first
+try:
+    data = json.loads(content)
+    # If successful, write it back
+    with open('$DEPLOY_DIR/firebase/service-account.json', 'w') as f:
+        json.dump(data, f, indent=2)
+    print('✅ JSON parsed and reformatted successfully')
+except:
+    # If JSON parsing fails, try to fix the private key formatting
+    # Replace any newlines within the private key with \\n
+    fixed_content = re.sub(r'-----BEGIN PRIVATE KEY-----(.*?)-----END PRIVATE KEY-----', 
+                          lambda m: '-----BEGIN PRIVATE KEY-----' + m.group(1).replace('\n', '\\n') + '-----END PRIVATE KEY-----', 
+                          content, flags=re.DOTALL)
+    
+    # Try to parse the fixed content
+    try:
+        data = json.loads(fixed_content)
+        with open('$DEPLOY_DIR/firebase/service-account.json', 'w') as f:
+            json.dump(data, f, indent=2)
+        print('✅ JSON fixed and reformatted successfully')
+    except Exception as e:
+        print(f'❌ Failed to fix JSON: {e}')
+        # Write the original content as fallback
+        with open('$DEPLOY_DIR/firebase/service-account.json', 'w') as f:
+            f.write(content)
+"
+            rm -f /tmp/raw_secret.json
           fi
 
           # Set strict permissions for the service account file
