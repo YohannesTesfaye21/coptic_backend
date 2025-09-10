@@ -122,11 +122,18 @@ jobs:
           echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/google-services.json"
           echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/GoogleService-Info.plist"
           
-          # Method 2: Fallback using Python for more reliable JSON handling
-          # Check if the JSON is valid, if not, try Python approach
+          # Method 2: Fallback using a more robust approach
+          # Check if the JSON is valid, if not, try alternative methods
           if ! jq empty "$DEPLOY_DIR/firebase/service-account.json" 2>/dev/null; then
-            echo "⚠️ JSON validation failed, trying Python approach..."
-            python3 -c "import json; data = '''${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}'''; open('$DEPLOY_DIR/firebase/service-account.json', 'w').write(data); print('✅ Firebase credentials written using Python')"
+            echo "⚠️ JSON validation failed, trying alternative approach..."
+            # Try using printf instead of echo for better handling
+            printf '%s\n' "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/service-account.json"
+            
+            # If still invalid, try without sed (in case the secret already has proper newlines)
+            if ! jq empty "$DEPLOY_DIR/firebase/service-account.json" 2>/dev/null; then
+              echo "⚠️ Trying without sed conversion..."
+              printf '%s\n' "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > "$DEPLOY_DIR/firebase/service-account.json"
+            fi
           fi
 
           # Set strict permissions for the service account file
