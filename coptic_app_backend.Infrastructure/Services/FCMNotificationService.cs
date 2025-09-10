@@ -19,32 +19,18 @@ namespace coptic_app_backend.Infrastructure.Services
             _logger = logger;
         }
 
-        public async Task<bool> SendNotificationAsync(string userId, string title, string body)
+        public async Task<bool> SendNotificationAsync(string deviceToken, string title, string body)
         {
             try
             {
-                // Guard against null or empty title/body
-                if (string.IsNullOrEmpty(title) || string.IsNullOrEmpty(body))
+                // Guard against null or empty parameters
+                if (string.IsNullOrEmpty(deviceToken) || string.IsNullOrEmpty(title) || string.IsNullOrEmpty(body))
                 {
-                    _logger.LogWarning("Title or Body is null/empty for notification to user: {UserId}", userId);
+                    _logger.LogWarning("DeviceToken, Title, or Body is null/empty");
                     return false;
                 }
                 
-                _logger.LogInformation("Sending notification to user: {UserId}, title: {Title}", userId, title);
-
-                var user = await _userRepository.GetUserByIdAsync(userId);
-                if (user == null)
-                {
-                    _logger.LogWarning("User not found: {UserId}", userId);
-                    return false;
-                }
-
-                var deviceToken = user.DeviceToken;
-                if (string.IsNullOrEmpty(deviceToken))
-                {
-                    _logger.LogWarning("No device token found for user: {UserId}", userId);
-                    return false;
-                }
+                _logger.LogInformation("Sending notification to device token: {DeviceToken}, title: {Title}", deviceToken, title);
 
                 var message = new Message()
                 {
@@ -56,7 +42,6 @@ namespace coptic_app_backend.Infrastructure.Services
                     },
                     Data = new Dictionary<string, string>()
                     {
-                        ["userId"] = userId,
                         ["timestamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString()
                     }
                 };
@@ -73,7 +58,7 @@ namespace coptic_app_backend.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending notification to user {UserId}: {Message}", userId, ex.Message);
+                _logger.LogError(ex, "Error sending notification to device token {DeviceToken}: {Message}", deviceToken, ex.Message);
                 return false;
             }
         }
@@ -118,5 +103,6 @@ namespace coptic_app_backend.Infrastructure.Services
                 return false;
             }
         }
+
     }
 }

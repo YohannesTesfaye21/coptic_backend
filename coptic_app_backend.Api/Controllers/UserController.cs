@@ -422,20 +422,13 @@ namespace coptic_app_backend.Api.Controllers
         {
             try
             {
-                if (request == null || string.IsNullOrEmpty(request.UserId) || string.IsNullOrEmpty(request.Title) || string.IsNullOrEmpty(request.Body))
+                if (request == null || string.IsNullOrEmpty(request.DeviceToken) || string.IsNullOrEmpty(request.Title) || string.IsNullOrEmpty(request.Body))
                 {
-                    return BadRequest("UserId, Title, and Body are required");
+                    return BadRequest("DeviceToken, Title, and Body are required");
                 }
 
-                // Check if user exists
-                var existingUser = await _userRepository.GetUserByIdAsync(request.UserId);
-                if (existingUser == null)
-                {
-                    return NotFound($"User with ID {request.UserId} not found");
-                }
-
-                // Send notification directly using the notification service
-                var success = await _notificationService.SendNotificationAsync(request.UserId, request.Title, request.Body);
+                // Send notification directly using device token
+                var success = await _notificationService.SendNotificationAsync(request.DeviceToken, request.Title, request.Body);
                 if (success)
                 {
                     return Ok(new { message = "Notification sent successfully" });
@@ -450,6 +443,7 @@ namespace coptic_app_backend.Api.Controllers
                 return StatusCode(500, new { error = "Internal server error", message = ex.Message });
             }
         }
+
     }
 
     public class CreateUserRequest
@@ -480,8 +474,9 @@ namespace coptic_app_backend.Api.Controllers
 
     public class SendNotificationRequest
     {
-        public string? UserId { get; set; }
+        public string? DeviceToken { get; set; }
         public string? Title { get; set; }
         public string? Body { get; set; }
     }
+
 }
