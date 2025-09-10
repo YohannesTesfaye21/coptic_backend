@@ -66,8 +66,13 @@ namespace coptic_app_backend.Api.Controllers
                 _ = _hubContext.Clients.Group(request.RecipientId).SendAsync("ReceiveMessage", message);
                 _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
                 
-                var notificationBody = string.IsNullOrEmpty(message.Content) ? "New message received" : message.Content;
-                await _notificationService.SendNotificationAsync(request.RecipientId, "New message", notificationBody);
+                // Get recipient's device token and send notification
+                var recipient = await _userRepository.GetUserByIdAsync(request.RecipientId);
+                if (recipient != null && !string.IsNullOrEmpty(recipient.DeviceToken))
+                {
+                    var notificationBody = string.IsNullOrEmpty(message.Content) ? "New message received" : message.Content;
+                    await _notificationService.SendNotificationAsync(recipient.DeviceToken, "New message", notificationBody);
+                }
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(request.RecipientId, currentUserAbuneId);
@@ -170,8 +175,13 @@ namespace coptic_app_backend.Api.Controllers
 
                 _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", message.Id, request.RecipientId);
 
-                var notificationBodyWithFile = string.IsNullOrEmpty(messageContent) ? "Sent an attachment" : messageContent;
-                await _notificationService.SendNotificationAsync(request.RecipientId, "New message", notificationBodyWithFile);
+                // Get recipient's device token and send notification
+                var recipient = await _userRepository.GetUserByIdAsync(request.RecipientId);
+                if (recipient != null && !string.IsNullOrEmpty(recipient.DeviceToken))
+                {
+                    var notificationBodyWithFile = string.IsNullOrEmpty(messageContent) ? "Sent an attachment" : messageContent;
+                    await _notificationService.SendNotificationAsync(recipient.DeviceToken, "New message", notificationBodyWithFile);
+                }
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(request.RecipientId, currentUserAbuneId);
@@ -1000,8 +1010,13 @@ namespace coptic_app_backend.Api.Controllers
 
                 _ = _hubContext.Clients.Group(currentUserId).SendAsync("MessageDelivered", replyMessage.Id, recipientId);
                 
-                var replyNotificationBody = string.IsNullOrEmpty(replyMessage.Content) ? "Sent a reply" : replyMessage.Content;
-                await _notificationService.SendNotificationAsync(recipientId, "New message", replyNotificationBody);
+                // Get recipient's device token and send notification
+                var recipient = await _userRepository.GetUserByIdAsync(recipientId);
+                if (recipient != null && !string.IsNullOrEmpty(recipient.DeviceToken))
+                {
+                    var replyNotificationBody = string.IsNullOrEmpty(replyMessage.Content) ? "Sent a reply" : replyMessage.Content;
+                    await _notificationService.SendNotificationAsync(recipient.DeviceToken, "New message", replyNotificationBody);
+                }
 
                 // Update unread counts and broadcast to recipient
                 await UpdateAndBroadcastUnreadCounts(recipientId, currentUserAbuneId);
