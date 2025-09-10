@@ -54,15 +54,6 @@ jobs:
 
     - name: Test
       run: |
-        # Wait for PostgreSQL to be ready
-        echo "⏳ Waiting for PostgreSQL to be ready..."
-        until pg_isready -h localhost -p 5432 -U ${{ env.POSTGRES_USER }}; do
-          echo "Waiting for Postgres..."
-          sleep 2
-        done
-        echo "✅ PostgreSQL is ready!"
-        
-        # Run tests
         dotnet test --no-build --verbosity normal --configuration Release
       env:
         ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=${{ env.POSTGRES_DB }};Username=${{ env.POSTGRES_USER }};Password=${{ env.POSTGRES_PASSWORD }}"
