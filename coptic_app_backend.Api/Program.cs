@@ -54,7 +54,8 @@ static string RepairMalformedJson(string malformedJson)
                     // Remove any existing BEGIN/END markers to avoid duplication
                     value = value.Replace("-----BEGIN PRIVATE KEY-----", "").Replace("-----END PRIVATE KEY-----", "").Trim();
                     
-                    // Fix newlines in private key - be more aggressive
+                    // Fix newlines in private key - comprehensive approach
+                    // First fix the common patterns we know about
                     value = value.Replace("nMII", "\nMII");
                     value = value.Replace("n1II", "\n1II");
                     value = value.Replace("n4Bq4", "\n4Bq4");
@@ -64,8 +65,11 @@ static string RepairMalformedJson(string malformedJson)
                     value = value.Replace("n758l", "\n758l");
                     value = value.Replace("n-----END", "\n-----END");
                     
-                    // Fix any remaining 'n' followed by base64 characters (more aggressive)
-                    value = System.Text.RegularExpressions.Regex.Replace(value, @"n([A-Za-z0-9+/=]{4,})", @"\n$1");
+                    // Then use regex for any remaining patterns - be more aggressive
+                    value = System.Text.RegularExpressions.Regex.Replace(value, @"n([A-Za-z0-9+/=]{2,})", @"\n$1");
+                    
+                    // Also fix any 'n' that appears after base64 content (like at the end of lines)
+                    value = System.Text.RegularExpressions.Regex.Replace(value, @"([A-Za-z0-9+/=]{4,})n", @"$1\n");
                     
                     // Clean up any remaining invalid characters
                     value = value.Replace("n", ""); // Remove any remaining standalone 'n' characters
