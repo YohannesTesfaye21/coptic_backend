@@ -29,130 +29,63 @@ static string RepairMalformedJson(string malformedJson)
     {
         Console.WriteLine("[JSON Repair] Detected malformed JSON, attempting repair...");
         
-        // Remove outer braces if present
-        var content = malformedJson.Trim().TrimStart('{').TrimEnd('}');
+        // Simple approach: split by lines and process each field
+        var lines = malformedJson.Replace("{", "").Replace("}", "").Split(',');
+        var data = new Dictionary<string, string>();
         
-        // Split by commas, but be careful with private key content
-        var parts = new List<string>();
-        var currentPart = new StringBuilder();
-        var inPrivateKey = false;
-        var braceCount = 0;
-        
-        for (int i = 0; i < content.Length; i++)
+        foreach (var line in lines)
         {
-            var currentChar = content[i];
-            
-            if (currentChar == '{') braceCount++;
-            if (currentChar == '}') braceCount--;
-            
-            if (currentChar == ',' && !inPrivateKey && braceCount == 0)
+            var trimmedLine = line.Trim();
+            if (trimmedLine.Contains(":"))
             {
-                parts.Add(currentPart.ToString().Trim());
-                currentPart.Clear();
-            }
-            else
-            {
-                currentPart.Append(currentChar);
+                var colonIndex = trimmedLine.IndexOf(':');
+                var key = trimmedLine.Substring(0, colonIndex).Trim().Trim('"', '\'');
+                var value = trimmedLine.Substring(colonIndex + 1).Trim().Trim('"', '\'');
                 
-                // Check if we're entering private key section
-                if (currentPart.ToString().Contains("private_key") && 
-                    currentPart.ToString().Contains("-----BEGIN PRIVATE KEY-----"))
+                // Handle private key specially
+                if (key == "private_key")
                 {
-                    inPrivateKey = true;
-                }
-                // Check if we're exiting private key section
-                else if (inPrivateKey && currentPart.ToString().Contains("-----END PRIVATE KEY-----"))
-                {
-                    inPrivateKey = false;
-                }
-            }
-        }
-        
-        // Add the last part
-        if (currentPart.Length > 0)
-        {
-            parts.Add(currentPart.ToString().Trim());
-        }
-        
-        // Reconstruct JSON
-        var jsonBuilder = new StringBuilder();
-        jsonBuilder.Append("{");
-        
-        for (int i = 0; i < parts.Count; i++)
-        {
-            var part = parts[i].Trim();
-            if (string.IsNullOrEmpty(part)) continue;
-            
-            if (i > 0) jsonBuilder.Append(",");
-            
-            // Find the first colon to split key and value
-            var colonIndex = part.IndexOf(':');
-            if (colonIndex > 0)
-            {
-                var key = part.Substring(0, colonIndex).Trim();
-                var value = part.Substring(colonIndex + 1).Trim().TrimEnd(',');
-                
-                // Ensure key is quoted
-                if (!key.StartsWith("\"")) key = $"\"{key}\"";
-                
-                // Handle special cases for values
-                if (key == "\"private_key\"")
-                {
-                    // Fix newlines in private key and remove carriage returns
+                    // Fix newlines in private key
+                    value = value.Replace("nMII", "\nMII");
+                    value = value.Replace("n1II", "\n1II");
+                    value = value.Replace("n4Bq4", "\n4Bq4");
+                    value = value.Replace("nB+PR", "\nB+PR");
+                    value = value.Replace("n1Lie", "\n1Lie");
+                    value = value.Replace("nA7JO", "\nA7JO");
+                    value = value.Replace("n758l", "\n758l");
+                    value = value.Replace("n-----END", "\n-----END");
                     value = value.Replace("\\n", "\n");
-                    value = value.Replace("\r", ""); // Remove carriage returns
-                    
-                    // More precise approach: only replace specific patterns that should be newlines
-                    // Based on the valid JSON structure, we know these specific patterns should be newlines
-                    value = value.Replace("nMII", "\nMII");           // First base64 line
-                    value = value.Replace("n1II", "\n1II");           // Alternative first base64 line pattern
-                    value = value.Replace("n4Bq4", "\n4Bq4");         // Second base64 line  
-                    value = value.Replace("nB+PR", "\nB+PR");         // Another line
-                    value = value.Replace("n1Lie", "\n1Lie");         // Another line
-                    value = value.Replace("nA7JO", "\nA7JO");         // Another line
-                    value = value.Replace("n758l", "\n758l");         // Another line
-                    value = value.Replace("n-----END", "\n-----END"); // End marker
-                    
-                    value = value.Replace("\n", "\\n"); // Escape newlines for JSON
-                    value = $"\"{value}\"";
-                }
-                else if (key == "\"project_id\"" || key == "\"private_key_id\"" || 
-                         key == "\"client_email\"" || key == "\"client_id\"" || 
-                         key == "\"auth_uri\"" || key == "\"token_uri\"" || 
-                         key == "\"auth_provider_x509_cert_url\"" || key == "\"client_x509_cert_url\"")
-                {
-                    // Ensure string values are quoted
-                    if (!value.StartsWith("\"")) value = $"\"{value}\"";
-                }
-                else if (key == "\"type\"")
-                {
-                    // Ensure string values are quoted
-                    if (!value.StartsWith("\"")) value = $"\"{value}\"";
-                }
-                else
-                {
-                    // For other values, try to determine if they should be quoted
-                    if (value.StartsWith("\"") && value.EndsWith("\""))
-                    {
-                        // Already quoted, keep as is
-                    }
-                    else if (value == "true" || value == "false" || 
-                             (int.TryParse(value, out _)) || 
-                             (double.TryParse(value, out _)))
-                    {
-                        // Keep as unquoted (boolean/number)
-                    }
-                    else
-                    {
-                        // Quote as string
-                        value = $"\"{value}\"";
-                    }
+                    value = value.Replace("\n", "\\n");
                 }
                 
-                jsonBuilder.Append($"{key}:{value}");
+                data[key] = value;
             }
         }
         
+        // Ensure required fields exist
+        var requiredFields = new[] { "type", "project_id", "private_key_id", "private_key", "client_email" };
+        foreach (var field in requiredFields)
+        {
+            if (!data.ContainsKey(field))
+            {
+                Console.WriteLine($"[JSON Repair] Missing required field: {field}");
+                return malformedJson; // Return original if missing required fields
+            }
+        }
+        
+        // Reconstruct JSON with proper formatting
+        var jsonBuilder = new StringBuilder();
+        jsonBuilder.AppendLine("{");
+        
+        var isFirst = true;
+        foreach (var kvp in data)
+        {
+            if (!isFirst) jsonBuilder.AppendLine(",");
+            jsonBuilder.Append($"  \"{kvp.Key}\": \"{kvp.Value}\"");
+            isFirst = false;
+        }
+        
+        jsonBuilder.AppendLine();
         jsonBuilder.Append("}");
         
         var repairedJson = jsonBuilder.ToString();
@@ -162,11 +95,13 @@ static string RepairMalformedJson(string malformedJson)
         {
             JsonDocument.Parse(repairedJson);
             Console.WriteLine("[JSON Repair] Successfully repaired malformed JSON");
+            Console.WriteLine($"[JSON Repair] Repaired JSON preview: {repairedJson.Substring(0, Math.Min(200, repairedJson.Length))}...");
             return repairedJson;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[JSON Repair] Failed to repair JSON: {ex.Message}");
+            Console.WriteLine($"[JSON Repair] Repaired JSON that failed validation: {repairedJson}");
             throw;
         }
     }
