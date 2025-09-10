@@ -105,6 +105,7 @@ static string RepairMalformedJson(string malformedJson)
                     // More precise approach: only replace specific patterns that should be newlines
                     // Based on the valid JSON structure, we know these specific patterns should be newlines
                     value = value.Replace("nMII", "\nMII");           // First base64 line
+                    value = value.Replace("n1II", "\n1II");           // Alternative first base64 line pattern
                     value = value.Replace("n4Bq4", "\n4Bq4");         // Second base64 line  
                     value = value.Replace("nB+PR", "\nB+PR");         // Another line
                     value = value.Replace("n1Lie", "\n1Lie");         // Another line
