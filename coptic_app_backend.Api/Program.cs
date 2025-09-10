@@ -15,22 +15,41 @@ using Google.Apis.Auth.OAuth2;
 var builder = WebApplication.CreateBuilder(args);
 
 // Only initialize Firebase in the Production environment
+
 if (builder.Environment.IsProduction())
 {
-    // Use direct path instead of environment variable to avoid Docker timing issues
     var credentialPath = Path.Combine(AppContext.BaseDirectory, "firebase", "service-account.json");
-    
+
     if (!File.Exists(credentialPath))
     {
-        Console.WriteLine($"[Firebase Init] Skipping Firebase initialization. Path not found: {credentialPath}");
+        Console.WriteLine($"[Firebase Init] File not found: {credentialPath}");
     }
     else if (FirebaseApp.DefaultInstance == null)
     {
-        FirebaseApp.Create(new AppOptions
+        try
         {
-            Credential = GoogleCredential.FromFile(credentialPath)
-        });
-        Console.WriteLine("[Firebase Init] Firebase initialized successfully!");
+            var jsonText = File.ReadAllText(credentialPath).Trim();
+
+            // Log only first 200 characters to avoid leaking private key
+            var preview = jsonText.Length > 200 ? jsonText.Substring(0, 200) + "..." : jsonText;
+            Console.WriteLine($"[Firebase Init] Credential file preview: {preview}");
+
+            var credential = GoogleCredential.FromJson(jsonText);
+            FirebaseApp.Create(new AppOptions { Credential = credential });
+            Console.WriteLine("[Firebase Init] Firebase initialized successfully!");
+        }
+        catch (Newtonsoft.Json.JsonReaderException jex)
+        {
+            Console.Error.WriteLine($"[Firebase Init] JSON deserialization failed: {jex.Message}");
+        }
+        catch (InvalidOperationException ioex) when (ioex.Message.Contains("Error deserializing JSON credential data"))
+        {
+            Console.WriteLine($"[Firebase Init] Invalid JSON credential data. Skipping Firebase initialization. {ioex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Firebase Init] Unexpected error during Firebase initialization: {ex.Message}");
+        }
     }
     else
     {
