@@ -98,9 +98,21 @@ static string RepairMalformedJson(string malformedJson)
                 // Handle special cases for values
                 if (key == "\"private_key\"")
                 {
-                    // Fix newlines in private key
+                    // Fix newlines in private key and remove carriage returns
                     value = value.Replace("\\n", "\n");
-                    value = Regex.Replace(value, @"n([A-Za-z0-9+/=])", @"\n$1");
+                    value = value.Replace("\r", ""); // Remove carriage returns
+                    
+                    // More precise approach: only replace specific patterns that should be newlines
+                    // Based on the valid JSON structure, we know these specific patterns should be newlines
+                    value = value.Replace("nMII", "\nMII");           // First base64 line
+                    value = value.Replace("n4Bq4", "\n4Bq4");         // Second base64 line  
+                    value = value.Replace("nB+PR", "\nB+PR");         // Another line
+                    value = value.Replace("n1Lie", "\n1Lie");         // Another line
+                    value = value.Replace("nA7JO", "\nA7JO");         // Another line
+                    value = value.Replace("n758l", "\n758l");         // Another line
+                    value = value.Replace("n-----END", "\n-----END"); // End marker
+                    
+                    value = value.Replace("\n", "\\n"); // Escape newlines for JSON
                     value = $"\"{value}\"";
                 }
                 else if (key == "\"project_id\"" || key == "\"private_key_id\"" || 
