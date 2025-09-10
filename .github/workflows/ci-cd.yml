@@ -109,11 +109,11 @@ jobs:
           mkdir -p $DEPLOY_DIR/firebase
           cd $DEPLOY_DIR
           
-          # 2. Write credential files from secrets
+          # 2. Write credential files from secrets (using base64 for safe transport)
           echo "🔥 Writing Firebase credential files..."
-          printf '%s' "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > $DEPLOY_DIR/firebase/service-account.json
-          printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" > $DEPLOY_DIR/firebase/google-services.json
-          printf '%s' "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" > $DEPLOY_DIR/firebase/GoogleService-Info.plist
+          echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" | base64 -d > $DEPLOY_DIR/firebase/service-account.json
+          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > $DEPLOY_DIR/firebase/google-services.json
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" | base64 -d > $DEPLOY_DIR/firebase/GoogleService-Info.plist
           chmod 600 $DEPLOY_DIR/firebase/service-account.json
           echo "✅ Firebase files created."
           ls -la $DEPLOY_DIR/firebase
