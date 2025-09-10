@@ -177,23 +177,8 @@ if (builder.Environment.IsProduction())
             var preview = jsonText.Length > 200 ? jsonText.Substring(0, 200) + "..." : jsonText;
             Console.WriteLine($"[Firebase Init] Credential file preview: {preview}");
 
-            // Try to repair malformed JSON if needed
-            string jsonToUse;
-            try
-            {
-                // First try to use the JSON as-is (in case CI/CD already fixed it)
-                GoogleCredential.FromJson(jsonText);
-                jsonToUse = jsonText;
-                Console.WriteLine("[Firebase Init] Using JSON as-is (already valid)");
-            }
-            catch
-            {
-                // If that fails, try to repair it
-                Console.WriteLine("[Firebase Init] JSON parsing failed, attempting repair...");
-                jsonToUse = RepairMalformedJson(jsonText);
-            }
-
-            var credential = GoogleCredential.FromJson(jsonToUse);
+            // Use the JSON directly (CI/CD should have fixed it)
+            var credential = GoogleCredential.FromJson(jsonText);
             FirebaseApp.Create(new AppOptions { Credential = credential });
             Console.WriteLine("[Firebase Init] Firebase initialized successfully!");
         }

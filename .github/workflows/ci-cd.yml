@@ -116,8 +116,39 @@ jobs:
           # 2. Write credential files from secrets 
           echo "🔥 Writing Firebase credential files..."
           
-          # Simply write the secret as-is - let Program.cs handle malformed JSON
-          echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > "$DEPLOY_DIR/firebase/service-account.json"
+          # Properly handle Firebase service account JSON with bash-only solution
+          echo "🔧 Processing Firebase service account JSON..."
+          
+          # Write the malformed JSON to a temp file
+          echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > /tmp/malformed.json
+          
+          # Fix the JSON using sed and awk
+          echo "🔧 Fixing malformed JSON..."
+          
+          # Step 1: Add quotes around unquoted keys
+          sed -i 's/^[[:space:]]*\([a-zA-Z_][a-zA-Z0-9_]*\)[[:space:]]*:/"\1":/g' /tmp/malformed.json
+          
+          # Step 2: Add quotes around unquoted string values (but not numbers/booleans)
+          sed -i 's/:[[:space:]]*\([^"0-9-{[]\)/:"\1/g' /tmp/malformed.json
+          sed -i 's/\([^"]\)[[:space:]]*\([,}]\)/\1"\2/g' /tmp/malformed.json
+          
+          # Step 3: Fix private key newlines - replace 'n' followed by base64 with '\n'
+          sed -i 's/n\([A-Za-z0-9+/=]\{4,\}\)/\\n\1/g' /tmp/malformed.json
+          
+          # Step 4: Remove any remaining standalone 'n' characters in private key
+          sed -i 's/\([A-Za-z0-9+/=]\{4,\}\)n\([A-Za-z0-9+/=]\{4,\}\)/\1\n\2/g' /tmp/malformed.json
+          
+          # Step 5: Ensure proper BEGIN/END markers for private key
+          sed -i 's/"private_key":[[:space:]]*"\([^"]*\)"/"private_key":"-----BEGIN PRIVATE KEY-----\\n\1\\n-----END PRIVATE KEY-----"/g' /tmp/malformed.json
+          
+          # Step 6: Clean up any double newlines
+          sed -i 's/\\n\\n/\\n/g' /tmp/malformed.json
+          
+          # Copy the fixed JSON to the final location
+          cp /tmp/malformed.json "$DEPLOY_DIR/firebase/service-account.json"
+          
+          # Clean up
+          rm -f /tmp/malformed.json
           
           # Write other files normally
           echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/google-services.json"
