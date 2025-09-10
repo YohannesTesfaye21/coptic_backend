@@ -77,6 +77,9 @@ static string RepairMalformedJson(string malformedJson)
                     // Add proper BEGIN and END markers
                     value = "-----BEGIN PRIVATE KEY-----\n" + value + "\n-----END PRIVATE KEY-----";
                     
+                    // Clean up any double newlines that might cause issues
+                    value = value.Replace("\n\n", "\n");
+                    
                     // Convert actual newlines to escaped newlines for JSON
                     value = value.Replace("\\n", "\n");
                     value = value.Replace("\n", "\\n");
