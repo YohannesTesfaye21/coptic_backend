@@ -28,8 +28,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        ports:
-          - 5432:5432
 
     steps:
     - name: Checkout code
@@ -118,30 +116,113 @@ jobs:
           # 2. Write credential files from secrets 
           echo "🔥 Writing Firebase credential files..."
           
-          # Method 1: Handle both escaped newlines (\n) and actual newlines
-          echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" | sed -e 's/\\n/\n/g' -e 's/-----BEGIN PRIVATE KEY-----/-----BEGIN PRIVATE KEY-----/g' -e 's/-----END PRIVATE KEY-----/-----END PRIVATE KEY-----/g' > "$DEPLOY_DIR/firebase/service-account.json"
+          # The secret appears to be malformed JSON (missing quotes), so we need to reconstruct it
+          echo "⚠️ Detected malformed JSON in secret, reconstructing..."
+          
+          # Write the raw secret to a temp file for processing
+          echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > /tmp/raw_secret.txt
+          
+          # Use Python to properly reconstruct the JSON
+          python3 -c "
+import json
+import re
+
+def reconstruct_firebase_json(input_file, output_file):
+    '''Reconstruct malformed Firebase JSON from GitHub secrets'''
+    try:
+        with open(input_file, 'r') as f:
+            content = f.read().strip()
+        
+        if not content:
+            raise ValueError("Empty secret content")
+        
+        # Try to parse as JSON first (in case it's actually valid)
+        try:
+            data = json.loads(content)
+            print('✅ Secret is already valid JSON')
+            with open(output_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            return True
+        except json.JSONDecodeError:
+            print('⚠️ Secret is not valid JSON, reconstructing...')
+            
+            # Extract values using regex patterns
+            patterns = {
+                'type': r'type:\s*([^,\n]+)',
+                'project_id': r'project_id:\s*([^,\n]+)',
+                'private_key_id': r'private_key_id:\s*([^,\n]+)',
+                'client_email': r'client_email:\s*([^,\n]+)',
+                'client_id': r'client_id:\s*([^,\n]+)',
+                'auth_uri': r'auth_uri:\s*([^,\n]+)',
+                'token_uri': r'token_uri:\s*([^,\n]+)',
+                'auth_provider_x509_cert_url': r'auth_provider_x509_cert_url:\s*([^,\n]+)',
+                'client_x509_cert_url': r'client_x509_cert_url:\s*([^,\n]+)'
+            }
+            
+            # Extract private key (special handling)
+            private_key_match = re.search(r'private_key:\s*(-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----)', content, re.DOTALL)
+            
+            # Build the JSON object
+            data = {}
+            missing_fields = []
+            
+            for key, pattern in patterns.items():
+                match = re.search(pattern, content)
+                if match:
+                    value = match.group(1).strip()
+                    data[key] = value
+                else:
+                    missing_fields.append(key)
+            
+            # Handle private key specially
+            if private_key_match:
+                private_key = private_key_match.group(1).strip()
+                # Fix newlines in private key - simplified approach
+                private_key = private_key.replace('\\n', '\n')  # Handle escaped newlines
+                data['private_key'] = private_key
+            else:
+                missing_fields.append('private_key')
+            
+            # Validate we have essential fields
+            essential_fields = ['type', 'project_id', 'private_key', 'client_email']
+            missing_essential = [field for field in essential_fields if field not in data]
+            
+            if missing_essential:
+                raise ValueError(f"Missing essential fields: {missing_essential}")
+            
+            if missing_fields:
+                print(f"⚠️ Missing optional fields: {missing_fields}")
+            
+            # Validate the reconstructed JSON
+            try:
+                json.dumps(data)  # Test if it's valid JSON
+            except (TypeError, ValueError) as e:
+                raise ValueError(f"Reconstructed data is not valid JSON: {e}")
+            
+            # Write the reconstructed JSON
+            with open(output_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            print('✅ JSON reconstructed successfully')
+            print(f'✅ Reconstructed fields: {list(data.keys())}')
+            return True
+            
+    except Exception as e:
+        print(f'❌ Failed to reconstruct Firebase JSON: {e}')
+        return False
+
+# Reconstruct the Firebase service account JSON
+if not reconstruct_firebase_json('/tmp/raw_secret.txt', '$DEPLOY_DIR/firebase/service-account.json'):
+    print('❌ Firebase JSON reconstruction failed - aborting deployment')
+    exit(1)
+"
+
+          # Clean up temp file
+          rm -f /tmp/raw_secret.txt
+          
+          # Write other files normally
           echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/google-services.json"
           echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/GoogleService-Info.plist"
-          
-          # Method 2: If JSON is still invalid, try a more aggressive approach
-          if ! jq empty "$DEPLOY_DIR/firebase/service-account.json" 2>/dev/null; then
-            echo "⚠️ JSON validation failed, trying aggressive cleanup..."
-            # Clean up the private key formatting more aggressively
-            echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" | \
-              sed -e 's/\\n/\n/g' \
-                  -e 's/-----BEGIN[[:space:]]*PRIVATE[[:space:]]*KEY-----/-----BEGIN PRIVATE KEY-----/g' \
-                  -e 's/-----END[[:space:]]*PRIVATE[[:space:]]*KEY-----/-----END PRIVATE KEY-----/g' \
-                  -e '/^[[:space:]]*$/d' > "$DEPLOY_DIR/firebase/service-account.json"
-          fi
-          
-          # Method 3: Final fallback - try to reconstruct the JSON properly
-          if ! jq empty "$DEPLOY_DIR/firebase/service-account.json" 2>/dev/null; then
-            echo "⚠️ Trying JSON reconstruction approach..."
-            # Write the secret to a temp file and use Python to fix it
-            echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > /tmp/raw_secret.json
-            python3 -c "import json, re; content=open('/tmp/raw_secret.json').read(); data=json.loads(content) if '\\n' not in content else json.loads(re.sub(r'-----BEGIN PRIVATE KEY-----(.*?)-----END PRIVATE KEY-----', lambda m: '-----BEGIN PRIVATE KEY-----' + m.group(1).replace('\n', '\\n') + '-----END PRIVATE KEY-----', content, flags=re.DOTALL)); open('$DEPLOY_DIR/firebase/service-account.json', 'w').write(json.dumps(data, indent=2)); print('✅ JSON fixed successfully')" 2>/dev/null || echo "⚠️ Python fix failed, using original content"
-            rm -f /tmp/raw_secret.json
-          fi
 
           # Set strict permissions for the service account file
           chmod 600 "$DEPLOY_DIR/firebase/service-account.json"
@@ -150,14 +231,19 @@ jobs:
           echo "🔍 Validating JSON files..."
           if command -v jq >/dev/null 2>&1; then
             if jq empty "$DEPLOY_DIR/firebase/service-account.json" 2>/dev/null; then
-              echo "✅ service-account.json is valid JSON"
+              echo "✅ service-account.json is valid JSON (jq validation)"
             else
-              echo "❌ service-account.json is invalid JSON"
+              echo "❌ service-account.json is invalid JSON (jq validation failed)"
               echo "First 500 characters:"
               head -c 500 "$DEPLOY_DIR/firebase/service-account.json"
             fi
           else
-            echo "⚠️ jq not available, skipping JSON validation"
+            echo "⚠️ jq not available, trying python3 json validation..."
+            if python3 -m json.tool "$DEPLOY_DIR/firebase/service-account.json" >/dev/null 2>&1; then
+              echo "✅ service-account.json is valid JSON (python3 validation)"
+            else
+              echo "❌ service-account.json is invalid JSON (python3 validation failed)"
+            fi
           fi
 
           echo "✅ Firebase files created."
@@ -175,7 +261,31 @@ jobs:
 
     - name: Health check
       run: |
-        echo "Performing health check..."
-        # Add health check logic here
-        # This could be checking if the application is responding
-        echo "Health check completed!"
+        echo "🔍 Performing health check..."
+        
+        # Wait for services to start
+        echo "⏳ Waiting for services to start..."
+        sleep 30
+        
+        # Check if the API is responding
+        echo "🌐 Checking API health endpoint..."
+        if curl -f -s --max-time 30 http://${{ secrets.SERVER_HOST }}:5000/health >/dev/null 2>&1; then
+          echo "✅ API health check passed"
+        else
+          echo "❌ API health check failed - checking container status..."
+          # Try to get container logs for debugging
+          echo "Container logs:"
+          docker logs coptic_api_prod --tail 20 || echo "Could not retrieve container logs"
+          exit 1
+        fi
+        
+        # Check if Firebase is properly initialized
+        echo "🔥 Checking Firebase initialization..."
+        if docker logs coptic_api_prod 2>&1 | grep -q "Firebase initialized successfully"; then
+          echo "✅ Firebase initialization confirmed"
+        else
+          echo "⚠️ Firebase initialization not confirmed - checking logs..."
+          docker logs coptic_api_prod 2>&1 | grep -i firebase || echo "No Firebase logs found"
+        fi
+        
+        echo "✅ Health check completed successfully!"
