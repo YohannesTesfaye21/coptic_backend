@@ -109,14 +109,19 @@ jobs:
           mkdir -p $DEPLOY_DIR/firebase
           cd $DEPLOY_DIR
           
-          # 2. Write credential files from secrets (using base64 for safe transport)
+          # 2. Write credential files from secrets 
           echo "🔥 Writing Firebase credential files..."
-          echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" | base64 -d > $DEPLOY_DIR/firebase/service-account.json
-          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > $DEPLOY_DIR/firebase/google-services.json
-          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" | base64 -d > $DEPLOY_DIR/firebase/GoogleService-Info.plist
-          chmod 600 $DEPLOY_DIR/firebase/service-account.json
+          # Write each file
+          echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > "$DEPLOY_DIR/firebase/service-account.json"
+          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > "$DEPLOY_DIR/firebase/google-services.json"
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" > "$DEPLOY_DIR/firebase/GoogleService-Info.plist"
+
+          # Set strict permissions for the service account file
+          chmod 600 "$DEPLOY_DIR/firebase/service-account.json"
+
           echo "✅ Firebase files created."
-          ls -la $DEPLOY_DIR/firebase
+          ls -la "$DEPLOY_DIR/firebase"
+
 
           # 3. Authenticate & Restart Docker
           echo "🔐 Authenticating and restarting services..."
