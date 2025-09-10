@@ -139,40 +139,7 @@ jobs:
             echo "⚠️ Trying JSON reconstruction approach..."
             # Write the secret to a temp file and use Python to fix it
             echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > /tmp/raw_secret.json
-            python3 -c "
-import json
-import re
-
-# Read the raw secret
-with open('/tmp/raw_secret.json', 'r') as f:
-    content = f.read()
-
-# Try to parse as JSON first
-try:
-    data = json.loads(content)
-    # If successful, write it back
-    with open('$DEPLOY_DIR/firebase/service-account.json', 'w') as f:
-        json.dump(data, f, indent=2)
-    print('✅ JSON parsed and reformatted successfully')
-except:
-    # If JSON parsing fails, try to fix the private key formatting
-    # Replace any newlines within the private key with \\n
-    fixed_content = re.sub(r'-----BEGIN PRIVATE KEY-----(.*?)-----END PRIVATE KEY-----', 
-                          lambda m: '-----BEGIN PRIVATE KEY-----' + m.group(1).replace('\n', '\\n') + '-----END PRIVATE KEY-----', 
-                          content, flags=re.DOTALL)
-    
-    # Try to parse the fixed content
-    try:
-        data = json.loads(fixed_content)
-        with open('$DEPLOY_DIR/firebase/service-account.json', 'w') as f:
-            json.dump(data, f, indent=2)
-        print('✅ JSON fixed and reformatted successfully')
-    except Exception as e:
-        print(f'❌ Failed to fix JSON: {e}')
-        # Write the original content as fallback
-        with open('$DEPLOY_DIR/firebase/service-account.json', 'w') as f:
-            f.write(content)
-"
+            python3 -c "import json, re; content=open('/tmp/raw_secret.json').read(); data=json.loads(content) if '\\n' not in content else json.loads(re.sub(r'-----BEGIN PRIVATE KEY-----(.*?)-----END PRIVATE KEY-----', lambda m: '-----BEGIN PRIVATE KEY-----' + m.group(1).replace('\n', '\\n') + '-----END PRIVATE KEY-----', content, flags=re.DOTALL)); open('$DEPLOY_DIR/firebase/service-account.json', 'w').write(json.dumps(data, indent=2)); print('✅ JSON fixed successfully')" 2>/dev/null || echo "⚠️ Python fix failed, using original content"
             rm -f /tmp/raw_secret.json
           fi
 
