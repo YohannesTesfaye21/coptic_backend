@@ -17,18 +17,24 @@ var builder = WebApplication.CreateBuilder(args);
 // Only initialize Firebase in the Production environment
 if (builder.Environment.IsProduction())
 {
-    var credentialPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
-    if (string.IsNullOrEmpty(credentialPath) || !File.Exists(credentialPath))
+    // Use direct path instead of environment variable to avoid Docker timing issues
+    var credentialPath = Path.Combine(AppContext.BaseDirectory, "firebase", "service-account.json");
+    
+    if (!File.Exists(credentialPath))
     {
         Console.WriteLine($"[Firebase Init] Skipping Firebase initialization. Path not found: {credentialPath}");
     }
-    else
+    else if (FirebaseApp.DefaultInstance == null)
     {
         FirebaseApp.Create(new AppOptions
         {
-            Credential = GoogleCredential.FromFile(credentialPath),
+            Credential = GoogleCredential.FromFile(credentialPath)
         });
         Console.WriteLine("[Firebase Init] Firebase initialized successfully!");
+    }
+    else
+    {
+        Console.WriteLine("[Firebase Init] Firebase already initialized.");
     }
 }
 
