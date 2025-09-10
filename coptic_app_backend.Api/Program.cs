@@ -87,6 +87,18 @@ static string RepairMalformedJson(string malformedJson)
                     
                     Console.WriteLine($"[JSON Repair] Repaired private key length: {value.Length}");
                     Console.WriteLine($"[JSON Repair] Private key ends with: {value.Substring(Math.Max(0, value.Length - 50))}");
+                    
+                    // Validate base64 content in private key
+                    try
+                    {
+                        var base64Content = value.Replace("-----BEGIN PRIVATE KEY-----\\n", "").Replace("\\n-----END PRIVATE KEY-----", "").Replace("\\n", "");
+                        var decodedBytes = Convert.FromBase64String(base64Content);
+                        Console.WriteLine($"[JSON Repair] Base64 validation passed - decoded {decodedBytes.Length} bytes");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[JSON Repair] Base64 validation failed: {ex.Message}");
+                    }
                 }
                 
                 data[key] = value;
