@@ -139,34 +139,44 @@ jobs:
           echo '    except json.JSONDecodeError:' >> /tmp/fix_json.py
           echo '        print("⚠️ Fixing malformed JSON...")' >> /tmp/fix_json.py
           echo '        ' >> /tmp/fix_json.py
-          echo '        # Simple approach: fix common issues' >> /tmp/fix_json.py
-          echo '        # Add quotes around unquoted keys' >> /tmp/fix_json.py
-          echo '        content = content.replace("type:", "\"type\":")' >> /tmp/fix_json.py
-          echo '        content = content.replace("project_id:", "\"project_id\":")' >> /tmp/fix_json.py
-          echo '        content = content.replace("private_key_id:", "\"private_key_id\":")' >> /tmp/fix_json.py
-          echo '        content = content.replace("private_key:", "\"private_key\":")' >> /tmp/fix_json.py
-          echo '        content = content.replace("client_email:", "\"client_email\":")' >> /tmp/fix_json.py
-          echo '        content = content.replace("client_id:", "\"client_id\":")' >> /tmp/fix_json.py
-          echo '        content = content.replace("auth_uri:", "\"auth_uri\":")' >> /tmp/fix_json.py
-          echo '        content = content.replace("token_uri:", "\"token_uri\":")' >> /tmp/fix_json.py
-          echo '        content = content.replace("auth_provider_x509_cert_url:", "\"auth_provider_x509_cert_url\":")' >> /tmp/fix_json.py
-          echo '        content = content.replace("client_x509_cert_url:", "\"client_x509_cert_url\":")' >> /tmp/fix_json.py
+          echo '        # More robust approach: reconstruct JSON from scratch' >> /tmp/fix_json.py
+          echo '        print("Raw content preview:", content[:200])' >> /tmp/fix_json.py
           echo '        ' >> /tmp/fix_json.py
-          echo '        # Fix private key newlines' >> /tmp/fix_json.py
-          echo '        content = content.replace("nMII", "\nMII")' >> /tmp/fix_json.py
-          echo '        content = content.replace("n1II", "\n1II")' >> /tmp/fix_json.py
-          echo '        content = content.replace("n4Bq4", "\n4Bq4")' >> /tmp/fix_json.py
-          echo '        content = content.replace("nB+PR", "\nB+PR")' >> /tmp/fix_json.py
-          echo '        content = content.replace("n1Lie", "\n1Lie")' >> /tmp/fix_json.py
-          echo '        content = content.replace("nA7JO", "\nA7JO")' >> /tmp/fix_json.py
-          echo '        content = content.replace("n758l", "\n758l")' >> /tmp/fix_json.py
-          echo '        content = content.replace("n-----END", "\n-----END")' >> /tmp/fix_json.py
+          echo '        # Remove outer braces and split by lines' >> /tmp/fix_json.py
+          echo '        content = content.strip().strip("{}")' >> /tmp/fix_json.py
+          echo '        lines = content.split(",")' >> /tmp/fix_json.py
+          echo '        data = {}' >> /tmp/fix_json.py
           echo '        ' >> /tmp/fix_json.py
-          echo '        # Try to parse again' >> /tmp/fix_json.py
-          echo '        try:' >> /tmp/fix_json.py
-          echo '            data = json.loads(content)' >> /tmp/fix_json.py
-          echo '        except json.JSONDecodeError as e:' >> /tmp/fix_json.py
-          echo '            print(f"❌ Failed to fix JSON: {e}")' >> /tmp/fix_json.py
+          echo '        for line in lines:' >> /tmp/fix_json.py
+          echo '            line = line.strip()' >> /tmp/fix_json.py
+          echo '            if ":" in line:' >> /tmp/fix_json.py
+          echo '                key, value = line.split(":", 1)' >> /tmp/fix_json.py
+          echo '                key = key.strip().strip("\'"")' >> /tmp/fix_json.py
+          echo '                value = value.strip()' >> /tmp/fix_json.py
+          echo '                ' >> /tmp/fix_json.py
+          echo '                # Handle private key specially' >> /tmp/fix_json.py
+          echo '                if key == "private_key":' >> /tmp/fix_json.py
+          echo '                    # Remove quotes and fix newlines' >> /tmp/fix_json.py
+          echo '                    value = value.strip("\'"")' >> /tmp/fix_json.py
+          echo '                    value = value.replace("nMII", "\nMII")' >> /tmp/fix_json.py
+          echo '                    value = value.replace("n1II", "\n1II")' >> /tmp/fix_json.py
+          echo '                    value = value.replace("n4Bq4", "\n4Bq4")' >> /tmp/fix_json.py
+          echo '                    value = value.replace("nB+PR", "\nB+PR")' >> /tmp/fix_json.py
+          echo '                    value = value.replace("n1Lie", "\n1Lie")' >> /tmp/fix_json.py
+          echo '                    value = value.replace("nA7JO", "\nA7JO")' >> /tmp/fix_json.py
+          echo '                    value = value.replace("n758l", "\n758l")' >> /tmp/fix_json.py
+          echo '                    value = value.replace("n-----END", "\n-----END")' >> /tmp/fix_json.py
+          echo '                    value = value.replace("\\n", "\n")' >> /tmp/fix_json.py
+          echo '                    value = value.replace("\n", "\\n")' >> /tmp/fix_json.py
+          echo '                    data[key] = value' >> /tmp/fix_json.py
+          echo '                else:' >> /tmp/fix_json.py
+          echo '                    # Remove quotes from other values' >> /tmp/fix_json.py
+          echo '                    value = value.strip("\'"")' >> /tmp/fix_json.py
+          echo '                    data[key] = value' >> /tmp/fix_json.py
+          echo '        ' >> /tmp/fix_json.py
+          echo '        # Validate the reconstructed data' >> /tmp/fix_json.py
+          echo '        if not data:' >> /tmp/fix_json.py
+          echo '            print("❌ Failed to reconstruct JSON data")' >> /tmp/fix_json.py
           echo '            return False' >> /tmp/fix_json.py
           echo '    ' >> /tmp/fix_json.py
           echo '    # Ensure required fields' >> /tmp/fix_json.py
