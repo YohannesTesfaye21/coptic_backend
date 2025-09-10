@@ -105,19 +105,58 @@ jobs:
           echo "🚀 Starting final, robust deployment..."
           DEPLOY_DIR="/root/coptic-app-backend"
           
+          # Install jq if not available for JSON validation
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "📦 Installing jq for JSON validation..."
+            apt-get update && apt-get install -y jq
+          fi
+          
           # 1. Ensure directories exist
           mkdir -p $DEPLOY_DIR/firebase
           cd $DEPLOY_DIR
           
           # 2. Write credential files from secrets 
           echo "🔥 Writing Firebase credential files..."
-          # Write each file
-          echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > "$DEPLOY_DIR/firebase/service-account.json"
-          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > "$DEPLOY_DIR/firebase/google-services.json"
-          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" > "$DEPLOY_DIR/firebase/GoogleService-Info.plist"
+          # Method 1: Try direct echo with sed (most common approach)
+          echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/service-account.json"
+          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/google-services.json"
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/GoogleService-Info.plist"
+          
+          # Method 2: Fallback using Python for more reliable JSON handling
+          # Check if the JSON is valid, if not, try Python approach
+          if ! jq empty "$DEPLOY_DIR/firebase/service-account.json" 2>/dev/null; then
+            echo "⚠️ JSON validation failed, trying Python approach..."
+            python3 -c "
+import json
+import sys
+
+# Get the secret data
+data = '''${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}'''
+
+# Write to file
+with open('$DEPLOY_DIR/firebase/service-account.json', 'w') as f:
+    f.write(data)
+
+print('✅ Firebase credentials written using Python')
+"
+          fi
 
           # Set strict permissions for the service account file
           chmod 600 "$DEPLOY_DIR/firebase/service-account.json"
+
+          # Validate JSON files
+          echo "🔍 Validating JSON files..."
+          if command -v jq >/dev/null 2>&1; then
+            if jq empty "$DEPLOY_DIR/firebase/service-account.json" 2>/dev/null; then
+              echo "✅ service-account.json is valid JSON"
+            else
+              echo "❌ service-account.json is invalid JSON"
+              echo "First 500 characters:"
+              head -c 500 "$DEPLOY_DIR/firebase/service-account.json"
+            fi
+          else
+            echo "⚠️ jq not available, skipping JSON validation"
+          fi
 
           echo "✅ Firebase files created."
           ls -la "$DEPLOY_DIR/firebase"
