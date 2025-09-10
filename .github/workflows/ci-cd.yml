@@ -126,19 +126,7 @@ jobs:
           # Check if the JSON is valid, if not, try Python approach
           if ! jq empty "$DEPLOY_DIR/firebase/service-account.json" 2>/dev/null; then
             echo "⚠️ JSON validation failed, trying Python approach..."
-            python3 -c "
-import json
-import sys
-
-# Get the secret data
-data = '''${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}'''
-
-# Write to file
-with open('$DEPLOY_DIR/firebase/service-account.json', 'w') as f:
-    f.write(data)
-
-print('✅ Firebase credentials written using Python')
-"
+            python3 -c "import json; data = '''${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}'''; open('$DEPLOY_DIR/firebase/service-account.json', 'w').write(data); print('✅ Firebase credentials written using Python')"
           fi
 
           # Set strict permissions for the service account file
