@@ -132,6 +132,9 @@ jobs:
           sed -i 's/:[[:space:]]*\([^"0-9\-{\[]\)/:"\1/g' /tmp/malformed.json
           sed -i 's/\([^"]\)[[:space:]]*\([,}]\)/\1"\2/g' /tmp/malformed.json
           
+          # Step 2.5: Clean up extra spaces after colons
+          sed -i 's/":[[:space:]]\+"/": "/g' /tmp/malformed.json
+          
           # Step 3: Fix private key newlines - replace 'n' followed by base64 with '\n'
           sed -i 's/n\([A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]\)/\\n\1/g' /tmp/malformed.json
           
