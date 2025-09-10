@@ -202,7 +202,7 @@ jobs:
           # Create validation script
           echo 'import sys, json' > /tmp/validate_json.py
           echo 'try:' >> /tmp/validate_json.py
-          echo '    with open("$DEPLOY_DIR/firebase/service-account.json", "r") as f:' >> /tmp/validate_json.py
+          echo '    with open("/root/coptic-app-backend/firebase/service-account.json", "r") as f:' >> /tmp/validate_json.py
           echo '        data = json.load(f)' >> /tmp/validate_json.py
           echo '    required = ["type", "project_id", "private_key_id", "private_key", "client_email"]' >> /tmp/validate_json.py
           echo '    missing = [f for f in required if f not in data]' >> /tmp/validate_json.py
