@@ -122,50 +122,56 @@ jobs:
           # Write the raw secret to a temp file for processing
           echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > /tmp/raw_secret.txt
           
-          # Create an improved Python script to properly handle malformed JSON
-          echo 'import json, re, sys' > /tmp/fix_json.py
+          # Create a simpler Python script to handle malformed JSON
+          echo 'import json, sys' > /tmp/fix_json.py
+          echo '' >> /tmp/fix_json.py
           echo 'def fix_firebase_json(input_file, output_file):' >> /tmp/fix_json.py
           echo '    with open(input_file, "r") as f:' >> /tmp/fix_json.py
           echo '        content = f.read().strip()' >> /tmp/fix_json.py
+          echo '    ' >> /tmp/fix_json.py
           echo '    # Remove any BOM or special characters' >> /tmp/fix_json.py
           echo '    content = content.encode("ascii", "ignore").decode()' >> /tmp/fix_json.py
+          echo '    ' >> /tmp/fix_json.py
           echo '    # First try to parse as-is' >> /tmp/fix_json.py
           echo '    try:' >> /tmp/fix_json.py
           echo '        data = json.loads(content)' >> /tmp/fix_json.py
           echo '        print("✅ Input is valid JSON")' >> /tmp/fix_json.py
           echo '    except json.JSONDecodeError:' >> /tmp/fix_json.py
           echo '        print("⚠️ Fixing malformed JSON...")' >> /tmp/fix_json.py
-          echo '        # Remove outer braces and split by field' >> /tmp/fix_json.py
-          echo '        content = content.strip().strip("{}")' >> /tmp/fix_json.py
-          echo '        data = {}' >> /tmp/fix_json.py
-          echo '        current_key = None' >> /tmp/fix_json.py
-          echo '        current_value = []' >> /tmp/fix_json.py
-          echo '        for line in content.split("\\n"):' >> /tmp/fix_json.py
-          echo '            line = line.strip().rstrip(",")' >> /tmp/fix_json.py
-          echo '            if ":" in line and not current_key:' >> /tmp/fix_json.py
-          echo '                parts = line.split(":", 1)' >> /tmp/fix_json.py
-          echo '                current_key = parts[0].strip().strip(\'"")' >> /tmp/fix_json.py
-          echo '                current_value = [parts[1].strip()]' >> /tmp/fix_json.py
-          echo '            elif current_key and line.endswith(\'"\'):' >> /tmp/fix_json.py
-          echo '                current_value.append(line)' >> /tmp/fix_json.py
-          echo '                value = " ".join(current_value).strip()' >> /tmp/fix_json.py
-          echo '                if current_key == "private_key":' >> /tmp/fix_json.py
-          echo '                    value = value.strip(\'"")' >> /tmp/fix_json.py
-          echo '                    value = value.replace("\\\\n", "\\n")' >> /tmp/fix_json.py
-          echo '                    value = value.replace("\\n", "\\n")' >> /tmp/fix_json.py
-          echo '                    if not value.startswith("\\""):' >> /tmp/fix_json.py
-          echo '                        value = f\'"{value}"' >> /tmp/fix_json.py
-          echo '                data[current_key] = value' >> /tmp/fix_json.py
-          echo '                current_key = None' >> /tmp/fix_json.py
-          echo '                current_value = []' >> /tmp/fix_json.py
-          echo '            elif current_key:' >> /tmp/fix_json.py
-          echo '                current_value.append(line)' >> /tmp/fix_json.py
+          echo '        ' >> /tmp/fix_json.py
+          echo '        # Simple approach: fix common issues' >> /tmp/fix_json.py
+          echo '        import re' >> /tmp/fix_json.py
+          echo '        ' >> /tmp/fix_json.py
+          echo '        # Fix unquoted keys' >> /tmp/fix_json.py
+          echo '        content = re.sub(r"(\w+):", r"\"\1\":", content)' >> /tmp/fix_json.py
+          echo '        ' >> /tmp/fix_json.py
+          echo '        # Fix unquoted string values' >> /tmp/fix_json.py
+          echo '        content = re.sub(r":\s*([^",{\[\s][^,}]*?)(\s*[,}])", r": \"\1\"\2", content)' >> /tmp/fix_json.py
+          echo '        ' >> /tmp/fix_json.py
+          echo '        # Fix private key newlines' >> /tmp/fix_json.py
+          echo '        content = content.replace("nMII", "\nMII")' >> /tmp/fix_json.py
+          echo '        content = content.replace("n1II", "\n1II")' >> /tmp/fix_json.py
+          echo '        content = content.replace("n4Bq4", "\n4Bq4")' >> /tmp/fix_json.py
+          echo '        content = content.replace("nB+PR", "\nB+PR")' >> /tmp/fix_json.py
+          echo '        content = content.replace("n1Lie", "\n1Lie")' >> /tmp/fix_json.py
+          echo '        content = content.replace("nA7JO", "\nA7JO")' >> /tmp/fix_json.py
+          echo '        content = content.replace("n758l", "\n758l")' >> /tmp/fix_json.py
+          echo '        content = content.replace("n-----END", "\n-----END")' >> /tmp/fix_json.py
+          echo '        ' >> /tmp/fix_json.py
+          echo '        # Try to parse again' >> /tmp/fix_json.py
+          echo '        try:' >> /tmp/fix_json.py
+          echo '            data = json.loads(content)' >> /tmp/fix_json.py
+          echo '        except json.JSONDecodeError as e:' >> /tmp/fix_json.py
+          echo '            print(f"❌ Failed to fix JSON: {e}")' >> /tmp/fix_json.py
+          echo '            return False' >> /tmp/fix_json.py
+          echo '    ' >> /tmp/fix_json.py
           echo '    # Ensure required fields' >> /tmp/fix_json.py
           echo '    required_fields = ["type", "project_id", "private_key_id", "private_key", "client_email"]' >> /tmp/fix_json.py
           echo '    for field in required_fields:' >> /tmp/fix_json.py
           echo '        if field not in data:' >> /tmp/fix_json.py
           echo '            print(f"❌ Missing required field: {field}")' >> /tmp/fix_json.py
           echo '            return False' >> /tmp/fix_json.py
+          echo '    ' >> /tmp/fix_json.py
           echo '    # Write the fixed JSON' >> /tmp/fix_json.py
           echo '    with open(output_file, "w") as f:' >> /tmp/fix_json.py
           echo '        json.dump(data, f, indent=2)' >> /tmp/fix_json.py
