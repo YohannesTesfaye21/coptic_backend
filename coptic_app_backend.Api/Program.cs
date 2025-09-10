@@ -197,7 +197,7 @@ if (builder.Environment.IsProduction())
             try
             {
                 // First try to use the JSON as-is (in case CI/CD already fixed it)
-                var credential = GoogleCredential.FromJson(jsonText);
+                GoogleCredential.FromJson(jsonText);
                 jsonToUse = jsonText;
                 Console.WriteLine("[Firebase Init] Using JSON as-is (already valid)");
             }
