@@ -19,12 +19,14 @@ namespace coptic_app_backend.Api.Controllers
         private readonly IUserService _userService;
         private readonly IUserRepository _userRepository;
         private readonly IAbuneService _abuneService;
+        private readonly INotificationService _notificationService;
 
-        public UserController(IUserService userService, IUserRepository userRepository, IAbuneService abuneService)
+        public UserController(IUserService userService, IUserRepository userRepository, IAbuneService abuneService, INotificationService notificationService)
         {
             _userService = userService;
             _userRepository = userRepository;
             _abuneService = abuneService;
+            _notificationService = notificationService;
         }
 
         /// <summary>
