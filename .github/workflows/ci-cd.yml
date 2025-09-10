@@ -140,13 +140,17 @@ jobs:
           echo '        print("⚠️ Fixing malformed JSON...")' >> /tmp/fix_json.py
           echo '        ' >> /tmp/fix_json.py
           echo '        # Simple approach: fix common issues' >> /tmp/fix_json.py
-          echo '        import re' >> /tmp/fix_json.py
-          echo '        ' >> /tmp/fix_json.py
-          echo '        # Fix unquoted keys' >> /tmp/fix_json.py
-          echo '        content = re.sub(r"(\w+):", r"\"\1\":", content)' >> /tmp/fix_json.py
-          echo '        ' >> /tmp/fix_json.py
-          echo '        # Fix unquoted string values' >> /tmp/fix_json.py
-          echo '        content = re.sub(r":\s*([^",{\[\s][^,}]*?)(\s*[,}])", r": \"\1\"\2", content)' >> /tmp/fix_json.py
+          echo '        # Add quotes around unquoted keys' >> /tmp/fix_json.py
+          echo '        content = content.replace("type:", "\"type\":")' >> /tmp/fix_json.py
+          echo '        content = content.replace("project_id:", "\"project_id\":")' >> /tmp/fix_json.py
+          echo '        content = content.replace("private_key_id:", "\"private_key_id\":")' >> /tmp/fix_json.py
+          echo '        content = content.replace("private_key:", "\"private_key\":")' >> /tmp/fix_json.py
+          echo '        content = content.replace("client_email:", "\"client_email\":")' >> /tmp/fix_json.py
+          echo '        content = content.replace("client_id:", "\"client_id\":")' >> /tmp/fix_json.py
+          echo '        content = content.replace("auth_uri:", "\"auth_uri\":")' >> /tmp/fix_json.py
+          echo '        content = content.replace("token_uri:", "\"token_uri\":")' >> /tmp/fix_json.py
+          echo '        content = content.replace("auth_provider_x509_cert_url:", "\"auth_provider_x509_cert_url\":")' >> /tmp/fix_json.py
+          echo '        content = content.replace("client_x509_cert_url:", "\"client_x509_cert_url\":")' >> /tmp/fix_json.py
           echo '        ' >> /tmp/fix_json.py
           echo '        # Fix private key newlines' >> /tmp/fix_json.py
           echo '        content = content.replace("nMII", "\nMII")' >> /tmp/fix_json.py
