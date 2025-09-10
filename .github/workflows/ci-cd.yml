@@ -122,100 +122,52 @@ jobs:
           # Write the raw secret to a temp file for processing
           echo "${{ secrets.FCM_SERVICE_ACCOUNT_JSON }}" > /tmp/raw_secret.txt
           
-          # Use Python to properly reconstruct the JSON
-          python3 -c "
-import json
-import re
+          # Create a Python script to properly handle malformed JSON
+          echo 'import json, re' > /tmp/fix_json.py
+          echo 'def fix_firebase_json(input_file, output_file):' >> /tmp/fix_json.py
+          echo '    with open(input_file, "r") as f: content = f.read().strip()' >> /tmp/fix_json.py
+          echo '    try:' >> /tmp/fix_json.py
+          echo '        data = json.loads(content)' >> /tmp/fix_json.py
+          echo '        print("✅ Secret is already valid JSON")' >> /tmp/fix_json.py
+          echo '        with open(output_file, "w") as f: json.dump(data, f, indent=2)' >> /tmp/fix_json.py
+          echo '        return True' >> /tmp/fix_json.py
+          echo '    except:' >> /tmp/fix_json.py
+          echo '        print("⚠️ Reconstructing malformed JSON...")' >> /tmp/fix_json.py
+          echo '        data = {}' >> /tmp/fix_json.py
+          echo '        content = content.strip("{}")' >> /tmp/fix_json.py
+          echo '        parts = []' >> /tmp/fix_json.py
+          echo '        current_part = ""' >> /tmp/fix_json.py
+          echo '        in_private_key = False' >> /tmp/fix_json.py
+          echo '        for char in content:' >> /tmp/fix_json.py
+          echo '            if char == "," and not in_private_key:' >> /tmp/fix_json.py
+          echo '                parts.append(current_part.strip())' >> /tmp/fix_json.py
+          echo '                current_part = ""' >> /tmp/fix_json.py
+          echo '            else:' >> /tmp/fix_json.py
+          echo '                current_part += char' >> /tmp/fix_json.py
+          echo '                if "private_key" in current_part and "-----BEGIN PRIVATE KEY-----" in current_part:' >> /tmp/fix_json.py
+          echo '                    in_private_key = True' >> /tmp/fix_json.py
+          echo '                elif in_private_key and "-----END PRIVATE KEY-----" in current_part:' >> /tmp/fix_json.py
+          echo '                    in_private_key = False' >> /tmp/fix_json.py
+          echo '        if current_part.strip(): parts.append(current_part.strip())' >> /tmp/fix_json.py
+          echo '        for part in parts:' >> /tmp/fix_json.py
+          echo '            if ":" in part:' >> /tmp/fix_json.py
+          echo '                key, value = part.split(":", 1)' >> /tmp/fix_json.py
+          echo '                key, value = key.strip(), value.strip().rstrip(",")' >> /tmp/fix_json.py
+          echo '                if key == "private_key":' >> /tmp/fix_json.py
+          echo '                    value = re.sub(r"n([A-Za-z0-9+/=])", r"\\n\\1", value)' >> /tmp/fix_json.py
+          echo '                    value = value.replace("\\\\n", "\\n")' >> /tmp/fix_json.py
+          echo '                data[key] = value' >> /tmp/fix_json.py
+          echo '        if "private_key" not in data:' >> /tmp/fix_json.py
+          echo '            print("❌ Missing private_key - aborting deployment")' >> /tmp/fix_json.py
+          echo '            return False' >> /tmp/fix_json.py
+          echo '        with open(output_file, "w") as f: json.dump(data, f, indent=2)' >> /tmp/fix_json.py
+          echo '        print("✅ JSON reconstructed successfully")' >> /tmp/fix_json.py
+          echo '        return True' >> /tmp/fix_json.py
+          echo 'if not fix_firebase_json("/tmp/raw_secret.txt", "$DEPLOY_DIR/firebase/service-account.json"):' >> /tmp/fix_json.py
+          echo '    exit(1)' >> /tmp/fix_json.py
 
-def reconstruct_firebase_json(input_file, output_file):
-    '''Reconstruct malformed Firebase JSON from GitHub secrets'''
-    try:
-        with open(input_file, 'r') as f:
-            content = f.read().strip()
-        
-        if not content:
-            raise ValueError("Empty secret content")
-        
-        # Try to parse as JSON first (in case it's actually valid)
-        try:
-            data = json.loads(content)
-            print('✅ Secret is already valid JSON')
-            with open(output_file, 'w') as f:
-                json.dump(data, f, indent=2)
-            return True
-        except json.JSONDecodeError:
-            print('⚠️ Secret is not valid JSON, reconstructing...')
-            
-            # Extract values using regex patterns
-            patterns = {
-                'type': r'type:\s*([^,\n]+)',
-                'project_id': r'project_id:\s*([^,\n]+)',
-                'private_key_id': r'private_key_id:\s*([^,\n]+)',
-                'client_email': r'client_email:\s*([^,\n]+)',
-                'client_id': r'client_id:\s*([^,\n]+)',
-                'auth_uri': r'auth_uri:\s*([^,\n]+)',
-                'token_uri': r'token_uri:\s*([^,\n]+)',
-                'auth_provider_x509_cert_url': r'auth_provider_x509_cert_url:\s*([^,\n]+)',
-                'client_x509_cert_url': r'client_x509_cert_url:\s*([^,\n]+)'
-            }
-            
-            # Extract private key (special handling)
-            private_key_match = re.search(r'private_key:\s*(-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----)', content, re.DOTALL)
-            
-            # Build the JSON object
-            data = {}
-            missing_fields = []
-            
-            for key, pattern in patterns.items():
-                match = re.search(pattern, content)
-                if match:
-                    value = match.group(1).strip()
-                    data[key] = value
-                else:
-                    missing_fields.append(key)
-            
-            # Handle private key specially
-            if private_key_match:
-                private_key = private_key_match.group(1).strip()
-                # Fix newlines in private key - simplified approach
-                private_key = private_key.replace('\\n', '\n')  # Handle escaped newlines
-                data['private_key'] = private_key
-            else:
-                missing_fields.append('private_key')
-            
-            # Validate we have essential fields
-            essential_fields = ['type', 'project_id', 'private_key', 'client_email']
-            missing_essential = [field for field in essential_fields if field not in data]
-            
-            if missing_essential:
-                raise ValueError(f"Missing essential fields: {missing_essential}")
-            
-            if missing_fields:
-                print(f"⚠️ Missing optional fields: {missing_fields}")
-            
-            # Validate the reconstructed JSON
-            try:
-                json.dumps(data)  # Test if it's valid JSON
-            except (TypeError, ValueError) as e:
-                raise ValueError(f"Reconstructed data is not valid JSON: {e}")
-            
-            # Write the reconstructed JSON
-            with open(output_file, 'w') as f:
-                json.dump(data, f, indent=2)
-            
-            print('✅ JSON reconstructed successfully')
-            print(f'✅ Reconstructed fields: {list(data.keys())}')
-            return True
-            
-    except Exception as e:
-        print(f'❌ Failed to reconstruct Firebase JSON: {e}')
-        return False
-
-# Reconstruct the Firebase service account JSON
-if not reconstruct_firebase_json('/tmp/raw_secret.txt', '$DEPLOY_DIR/firebase/service-account.json'):
-    print('❌ Firebase JSON reconstruction failed - aborting deployment')
-    exit(1)
-"
+          # Run the Python script
+          python3 /tmp/fix_json.py
 
           # Clean up temp file
           rm -f /tmp/raw_secret.txt
@@ -260,32 +212,38 @@ if not reconstruct_firebase_json('/tmp/raw_secret.txt', '$DEPLOY_DIR/firebase/se
           echo "✅ Deployment complete."
 
     - name: Health check
-      run: |
-        echo "🔍 Performing health check..."
-        
-        # Wait for services to start
-        echo "⏳ Waiting for services to start..."
-        sleep 30
-        
-        # Check if the API is responding
-        echo "🌐 Checking API health endpoint..."
-        if curl -f -s --max-time 30 http://${{ secrets.SERVER_HOST }}:5000/health >/dev/null 2>&1; then
-          echo "✅ API health check passed"
-        else
-          echo "❌ API health check failed - checking container status..."
-          # Try to get container logs for debugging
-          echo "Container logs:"
-          docker logs coptic_api_prod --tail 20 || echo "Could not retrieve container logs"
-          exit 1
-        fi
-        
-        # Check if Firebase is properly initialized
-        echo "🔥 Checking Firebase initialization..."
-        if docker logs coptic_api_prod 2>&1 | grep -q "Firebase initialized successfully"; then
-          echo "✅ Firebase initialization confirmed"
-        else
-          echo "⚠️ Firebase initialization not confirmed - checking logs..."
-          docker logs coptic_api_prod 2>&1 | grep -i firebase || echo "No Firebase logs found"
-        fi
-        
-        echo "✅ Health check completed successfully!"
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: ${{ secrets.SERVER_PORT || '22' }}
+        script: |
+          echo "🔍 Performing health check..."
+          
+          # Wait for services to start
+          echo "⏳ Waiting for services to start..."
+          sleep 30
+          
+          # Check if the API is responding
+          echo "🌐 Checking API health endpoint..."
+          if curl -f -s --max-time 30 http://localhost:5000/health >/dev/null 2>&1; then
+            echo "✅ API health check passed"
+          else
+            echo "❌ API health check failed - checking container status..."
+            # Try to get container logs for debugging
+            echo "Container logs:"
+            docker logs coptic_api_prod --tail 20 || echo "Could not retrieve container logs"
+            exit 1
+          fi
+          
+          # Check if Firebase is properly initialized
+          echo "🔥 Checking Firebase initialization..."
+          if docker logs coptic_api_prod 2>&1 | grep -q "Firebase initialized successfully"; then
+            echo "✅ Firebase initialization confirmed"
+          else
+            echo "⚠️ Firebase initialization not confirmed - checking logs..."
+            docker logs coptic_api_prod 2>&1 | grep -i firebase || echo "No Firebase logs found"
+          fi
+          
+          echo "✅ Health check completed successfully!"
