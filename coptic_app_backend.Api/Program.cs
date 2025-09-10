@@ -48,6 +48,12 @@ static string RepairMalformedJson(string malformedJson)
                     Console.WriteLine($"[JSON Repair] Original private key length: {value.Length}");
                     Console.WriteLine($"[JSON Repair] Private key preview: {value.Substring(0, Math.Min(100, value.Length))}...");
                     
+                    // Clean up the private key first
+                    value = value.Trim();
+                    
+                    // Remove any existing BEGIN/END markers to avoid duplication
+                    value = value.Replace("-----BEGIN PRIVATE KEY-----", "").Replace("-----END PRIVATE KEY-----", "").Trim();
+                    
                     // Fix newlines in private key - be more aggressive
                     value = value.Replace("nMII", "\nMII");
                     value = value.Replace("n1II", "\n1II");
@@ -61,15 +67,11 @@ static string RepairMalformedJson(string malformedJson)
                     // Fix any remaining 'n' followed by base64 characters (more aggressive)
                     value = System.Text.RegularExpressions.Regex.Replace(value, @"n([A-Za-z0-9+/=]{4,})", @"\n$1");
                     
-                    // Ensure proper start and end markers
-                    if (!value.StartsWith("-----BEGIN PRIVATE KEY-----"))
-                    {
-                        value = "-----BEGIN PRIVATE KEY-----" + value;
-                    }
-                    if (!value.EndsWith("-----END PRIVATE KEY-----"))
-                    {
-                        value = value + "-----END PRIVATE KEY-----";
-                    }
+                    // Clean up any remaining invalid characters
+                    value = value.Replace("n", ""); // Remove any remaining standalone 'n' characters
+                    
+                    // Add proper BEGIN and END markers
+                    value = "-----BEGIN PRIVATE KEY-----\n" + value + "\n-----END PRIVATE KEY-----";
                     
                     // Convert actual newlines to escaped newlines for JSON
                     value = value.Replace("\\n", "\n");
