@@ -70,6 +70,15 @@ static string RepairMalformedJson(string malformedJson)
                     // Clean up any remaining invalid characters
                     value = value.Replace("n", ""); // Remove any remaining standalone 'n' characters
                     
+                    // Remove any invalid escape sequences that could break JSON
+                    value = value.Replace("\\c", "c");
+                    value = value.Replace("\\L", "L");
+                    value = value.Replace("\\u", "u");
+                    value = value.Replace("\\t", "t");
+                    value = value.Replace("\\r", "r");
+                    value = value.Replace("\\f", "f");
+                    value = value.Replace("\\b", "b");
+                    
                     // Add proper BEGIN and END markers
                     value = "-----BEGIN PRIVATE KEY-----\n" + value + "\n-----END PRIVATE KEY-----";
                     
