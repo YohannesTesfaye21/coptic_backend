@@ -169,8 +169,14 @@ jobs:
           # Run the Python script
           python3 /tmp/fix_json.py
 
-          # Clean up temp file
-          rm -f /tmp/raw_secret.txt
+          # Clean up temp files
+          rm -f /tmp/raw_secret.txt /tmp/fix_json.py
+          
+          # Verify the JSON was created successfully
+          if [ ! -f "$DEPLOY_DIR/firebase/service-account.json" ]; then
+            echo "❌ Firebase service account JSON was not created - aborting deployment"
+            exit 1
+          fi
           
           # Write other files normally
           echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | sed 's/\\n/\n/g' > "$DEPLOY_DIR/firebase/google-services.json"
