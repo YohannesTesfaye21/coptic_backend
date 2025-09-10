@@ -70,14 +70,9 @@ static string RepairMalformedJson(string malformedJson)
                     // Clean up any remaining invalid characters
                     value = value.Replace("n", ""); // Remove any remaining standalone 'n' characters
                     
-                    // Remove any invalid escape sequences that could break JSON
-                    value = value.Replace("\\c", "c");
-                    value = value.Replace("\\L", "L");
-                    value = value.Replace("\\u", "u");
-                    value = value.Replace("\\t", "t");
-                    value = value.Replace("\\r", "r");
-                    value = value.Replace("\\f", "f");
-                    value = value.Replace("\\b", "b");
+                    // Remove any invalid escape sequences that could break JSON BEFORE newline conversion
+                    // Use regex to remove all invalid escape sequences (keep only valid ones: \n, \", \\)
+                    value = System.Text.RegularExpressions.Regex.Replace(value, @"\\(?![n""\\])", "");
                     
                     // Add proper BEGIN and END markers
                     value = "-----BEGIN PRIVATE KEY-----\n" + value + "\n-----END PRIVATE KEY-----";
@@ -85,6 +80,10 @@ static string RepairMalformedJson(string malformedJson)
                     // Convert actual newlines to escaped newlines for JSON
                     value = value.Replace("\\n", "\n");
                     value = value.Replace("\n", "\\n");
+                    
+                    // Final cleanup of any invalid escape sequences that might have been created
+                    // Use regex to remove all invalid escape sequences (keep only valid ones: \n, \", \\)
+                    value = System.Text.RegularExpressions.Regex.Replace(value, @"\\(?![n""\\])", "");
                     
                     Console.WriteLine($"[JSON Repair] Repaired private key length: {value.Length}");
                     Console.WriteLine($"[JSON Repair] Private key ends with: {value.Substring(Math.Max(0, value.Length - 50))}");
