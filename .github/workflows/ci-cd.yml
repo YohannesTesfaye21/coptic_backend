@@ -143,9 +143,15 @@ jobs:
           sed -i 's/\([^"]\)[[:space:]]*\([,}]\)/\1"\2/g' /tmp/malformed.json
           
           # Step 4: Clean up extra spaces after colons
+          echo "🔧 Cleaning up extra spaces after colons..."
           sed -i 's/": "/": "/g' /tmp/malformed.json
           sed -i 's/":  "/": "/g' /tmp/malformed.json
           sed -i 's/":   "/": "/g' /tmp/malformed.json
+          sed -i 's/":    "/": "/g' /tmp/malformed.json
+          
+          # Debug: Show the current state
+          echo "🔍 Current JSON state after cleanup:"
+          head -5 /tmp/malformed.json
           
           # Step 5: Fix private key newlines - replace 'n' followed by base64 with '\n'
           sed -i 's/n\([A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9]\)/\\n\1/g' /tmp/malformed.json
