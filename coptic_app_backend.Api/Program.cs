@@ -45,7 +45,10 @@ static string RepairMalformedJson(string malformedJson)
                 // Handle private key specially
                 if (key == "private_key")
                 {
-                    // Fix newlines in private key
+                    Console.WriteLine($"[JSON Repair] Original private key length: {value.Length}");
+                    Console.WriteLine($"[JSON Repair] Private key preview: {value.Substring(0, Math.Min(100, value.Length))}...");
+                    
+                    // Fix newlines in private key - be more aggressive
                     value = value.Replace("nMII", "\nMII");
                     value = value.Replace("n1II", "\n1II");
                     value = value.Replace("n4Bq4", "\n4Bq4");
@@ -54,8 +57,26 @@ static string RepairMalformedJson(string malformedJson)
                     value = value.Replace("nA7JO", "\nA7JO");
                     value = value.Replace("n758l", "\n758l");
                     value = value.Replace("n-----END", "\n-----END");
+                    
+                    // Fix any remaining 'n' followed by base64 characters (more aggressive)
+                    value = System.Text.RegularExpressions.Regex.Replace(value, @"n([A-Za-z0-9+/=]{4,})", @"\n$1");
+                    
+                    // Ensure proper start and end markers
+                    if (!value.StartsWith("-----BEGIN PRIVATE KEY-----"))
+                    {
+                        value = "-----BEGIN PRIVATE KEY-----" + value;
+                    }
+                    if (!value.EndsWith("-----END PRIVATE KEY-----"))
+                    {
+                        value = value + "-----END PRIVATE KEY-----";
+                    }
+                    
+                    // Convert actual newlines to escaped newlines for JSON
                     value = value.Replace("\\n", "\n");
                     value = value.Replace("\n", "\\n");
+                    
+                    Console.WriteLine($"[JSON Repair] Repaired private key length: {value.Length}");
+                    Console.WriteLine($"[JSON Repair] Private key ends with: {value.Substring(Math.Max(0, value.Length - 50))}");
                 }
                 
                 data[key] = value;
