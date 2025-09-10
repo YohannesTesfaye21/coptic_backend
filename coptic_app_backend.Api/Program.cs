@@ -11,8 +11,153 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
+using System.Text.RegularExpressions;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// JSON Repair Utility for malformed Firebase credentials
+static string RepairMalformedJson(string malformedJson)
+{
+    try
+    {
+        // First, try to parse as-is
+        JsonDocument.Parse(malformedJson);
+        return malformedJson; // Already valid JSON
+    }
+    catch
+    {
+        Console.WriteLine("[JSON Repair] Detected malformed JSON, attempting repair...");
+        
+        // Remove outer braces if present
+        var content = malformedJson.Trim().TrimStart('{').TrimEnd('}');
+        
+        // Split by commas, but be careful with private key content
+        var parts = new List<string>();
+        var currentPart = new StringBuilder();
+        var inPrivateKey = false;
+        var braceCount = 0;
+        
+        for (int i = 0; i < content.Length; i++)
+        {
+            var currentChar = content[i];
+            
+            if (currentChar == '{') braceCount++;
+            if (currentChar == '}') braceCount--;
+            
+            if (currentChar == ',' && !inPrivateKey && braceCount == 0)
+            {
+                parts.Add(currentPart.ToString().Trim());
+                currentPart.Clear();
+            }
+            else
+            {
+                currentPart.Append(currentChar);
+                
+                // Check if we're entering private key section
+                if (currentPart.ToString().Contains("private_key") && 
+                    currentPart.ToString().Contains("-----BEGIN PRIVATE KEY-----"))
+                {
+                    inPrivateKey = true;
+                }
+                // Check if we're exiting private key section
+                else if (inPrivateKey && currentPart.ToString().Contains("-----END PRIVATE KEY-----"))
+                {
+                    inPrivateKey = false;
+                }
+            }
+        }
+        
+        // Add the last part
+        if (currentPart.Length > 0)
+        {
+            parts.Add(currentPart.ToString().Trim());
+        }
+        
+        // Reconstruct JSON
+        var jsonBuilder = new StringBuilder();
+        jsonBuilder.Append("{");
+        
+        for (int i = 0; i < parts.Count; i++)
+        {
+            var part = parts[i].Trim();
+            if (string.IsNullOrEmpty(part)) continue;
+            
+            if (i > 0) jsonBuilder.Append(",");
+            
+            // Find the first colon to split key and value
+            var colonIndex = part.IndexOf(':');
+            if (colonIndex > 0)
+            {
+                var key = part.Substring(0, colonIndex).Trim();
+                var value = part.Substring(colonIndex + 1).Trim().TrimEnd(',');
+                
+                // Ensure key is quoted
+                if (!key.StartsWith("\"")) key = $"\"{key}\"";
+                
+                // Handle special cases for values
+                if (key == "\"private_key\"")
+                {
+                    // Fix newlines in private key
+                    value = value.Replace("\\n", "\n");
+                    value = Regex.Replace(value, @"n([A-Za-z0-9+/=])", @"\n$1");
+                    value = $"\"{value}\"";
+                }
+                else if (key == "\"project_id\"" || key == "\"private_key_id\"" || 
+                         key == "\"client_email\"" || key == "\"client_id\"" || 
+                         key == "\"auth_uri\"" || key == "\"token_uri\"" || 
+                         key == "\"auth_provider_x509_cert_url\"" || key == "\"client_x509_cert_url\"")
+                {
+                    // Ensure string values are quoted
+                    if (!value.StartsWith("\"")) value = $"\"{value}\"";
+                }
+                else if (key == "\"type\"")
+                {
+                    // Ensure string values are quoted
+                    if (!value.StartsWith("\"")) value = $"\"{value}\"";
+                }
+                else
+                {
+                    // For other values, try to determine if they should be quoted
+                    if (value.StartsWith("\"") && value.EndsWith("\""))
+                    {
+                        // Already quoted, keep as is
+                    }
+                    else if (value == "true" || value == "false" || 
+                             (int.TryParse(value, out _)) || 
+                             (double.TryParse(value, out _)))
+                    {
+                        // Keep as unquoted (boolean/number)
+                    }
+                    else
+                    {
+                        // Quote as string
+                        value = $"\"{value}\"";
+                    }
+                }
+                
+                jsonBuilder.Append($"{key}:{value}");
+            }
+        }
+        
+        jsonBuilder.Append("}");
+        
+        var repairedJson = jsonBuilder.ToString();
+        
+        // Validate the repaired JSON
+        try
+        {
+            JsonDocument.Parse(repairedJson);
+            Console.WriteLine("[JSON Repair] Successfully repaired malformed JSON");
+            return repairedJson;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[JSON Repair] Failed to repair JSON: {ex.Message}");
+            throw;
+        }
+    }
+}
 
 // Only initialize Firebase in the Production environment
 
@@ -34,7 +179,10 @@ if (builder.Environment.IsProduction())
             var preview = jsonText.Length > 200 ? jsonText.Substring(0, 200) + "..." : jsonText;
             Console.WriteLine($"[Firebase Init] Credential file preview: {preview}");
 
-            var credential = GoogleCredential.FromJson(jsonText);
+            // Try to repair malformed JSON if needed
+            var repairedJson = RepairMalformedJson(jsonText);
+
+            var credential = GoogleCredential.FromJson(repairedJson);
             FirebaseApp.Create(new AppOptions { Credential = credential });
             Console.WriteLine("[Firebase Init] Firebase initialized successfully!");
         }

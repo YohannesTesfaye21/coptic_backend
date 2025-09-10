@@ -163,7 +163,7 @@ jobs:
           echo '        with open(output_file, "w") as f: json.dump(data, f, indent=2)' >> /tmp/fix_json.py
           echo '        print("✅ JSON reconstructed successfully")' >> /tmp/fix_json.py
           echo '        return True' >> /tmp/fix_json.py
-          echo 'if not fix_firebase_json("/tmp/raw_secret.txt", "$DEPLOY_DIR/firebase/service-account.json"):' >> /tmp/fix_json.py
+          echo 'if not fix_firebase_json("/tmp/raw_secret.txt", "/root/coptic-app-backend/firebase/service-account.json"):' >> /tmp/fix_json.py
           echo '    exit(1)' >> /tmp/fix_json.py
 
           # Run the Python script
