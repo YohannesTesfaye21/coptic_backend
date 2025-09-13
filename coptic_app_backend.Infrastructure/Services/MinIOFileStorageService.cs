@@ -110,7 +110,7 @@ namespace coptic_app_backend.Infrastructure.Services
                 var presignedUrlArgs = new PresignedGetObjectArgs()
                     .WithBucket(_bucketName)
                     .WithObject(fileName)
-                    .WithExpiry(24 * 60 * 60); // 24 hours expiry
+                    .WithExpiry(7 * 24 * 60 * 60); // 7 days expiry
 
                 var presignedUrl = await _minioClient.PresignedGetObjectAsync(presignedUrlArgs);
                 _logger.LogInformation("Generated presigned URL for file: {FileName} -> {Url}", fileName, presignedUrl);
