@@ -470,6 +470,93 @@ namespace coptic_app_backend.Infrastructure.Repositories
             }
         }
 
+        public async Task<List<Folder>> GetAllFoldersAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Getting all folders from database");
+                var allFolders = await _context.Folders
+                    .OrderBy(f => f.SortOrder)
+                    .ThenBy(f => f.Name)
+                    .ToListAsync();
+                _logger.LogInformation("Retrieved {Count} total folders from database (including inactive)", allFolders.Count);
+                
+                var activeFolders = allFolders.Where(f => f.IsActive).ToList();
+                _logger.LogInformation("Retrieved {Count} active folders from database", activeFolders.Count);
+                
+                return activeFolders;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all folders");
+                throw;
+            }
+        }
+
+        public async Task<List<FolderTreeNode>> GetAllFolderTreesAsync()
+        {
+            try
+            {
+                var allFolders = await _context.Folders
+                    .Where(f => f.IsActive)
+                    .OrderBy(f => f.SortOrder)
+                    .ThenBy(f => f.Name)
+                    .ToListAsync();
+
+                // Group folders by AbuneId and build trees for each Abune
+                var trees = new List<FolderTreeNode>();
+                var abuneGroups = allFolders.GroupBy(f => f.AbuneId);
+
+                foreach (var abuneGroup in abuneGroups)
+                {
+                    var abuneFolders = abuneGroup.ToList();
+                    var abuneTrees = BuildFolderTreesForAbune(abuneFolders);
+                    trees.AddRange(abuneTrees);
+                }
+
+                return trees;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all folder trees");
+                throw;
+            }
+        }
+
+        private List<FolderTreeNode> BuildFolderTreesForAbune(List<Folder> folders)
+        {
+            var tree = new List<FolderTreeNode>();
+            var rootFolders = folders.Where(f => f.ParentId == null).ToList();
+
+            foreach (var folder in rootFolders)
+            {
+                var node = new FolderTreeNode
+                {
+                    Id = folder.Id,
+                    Name = folder.Name,
+                    Description = folder.Description,
+                    ParentId = folder.ParentId,
+                    CreatedBy = folder.CreatedBy,
+                    AbuneId = folder.AbuneId,
+                    CreatedAt = folder.CreatedAt,
+                    LastModified = folder.LastModified,
+                    IsActive = folder.IsActive,
+                    SortOrder = folder.SortOrder,
+                    Color = folder.Color,
+                    Icon = folder.Icon,
+                    Children = BuildFolderTree(folders, folder.Id),
+                    ChildrenCount = folders.Count(f => f.ParentId == folder.Id && f.IsActive)
+                };
+
+                // Calculate total children count (including all descendants)
+                node.TotalChildrenCount = CalculateTotalChildrenCount(node.Children);
+
+                tree.Add(node);
+            }
+
+            return tree;
+        }
+
         #endregion
     }
 }

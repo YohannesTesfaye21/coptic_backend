@@ -85,5 +85,15 @@ namespace coptic_app_backend.Domain.Interfaces
         /// Get folders by search term
         /// </summary>
         Task<List<Folder>> SearchFoldersAsync(string abuneId, string searchTerm);
+        
+        /// <summary>
+        /// Get all folders across all Abunes (for public access)
+        /// </summary>
+        Task<List<Folder>> GetAllFoldersAsync();
+        
+        /// <summary>
+        /// Get all folder trees across all Abunes (for public access)
+        /// </summary>
+        Task<List<FolderTreeNode>> GetAllFolderTreesAsync();
     }
 }

@@ -396,5 +396,34 @@ namespace coptic_app_backend.Application.Services
                 return (false, "An error occurred while validating the request");
             }
         }
+
+        public async Task<List<Folder>> GetAllFoldersAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Getting all folders from repository");
+                var folders = await _folderRepository.GetAllFoldersAsync();
+                _logger.LogInformation("Retrieved {Count} folders from repository", folders.Count);
+                return folders;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all folders");
+                throw;
+            }
+        }
+
+        public async Task<List<FolderTreeNode>> GetAllFolderTreesAsync()
+        {
+            try
+            {
+                return await _folderRepository.GetAllFolderTreesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all folder trees");
+                throw;
+            }
+        }
     }
 }

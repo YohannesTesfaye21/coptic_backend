@@ -80,5 +80,15 @@ namespace coptic_app_backend.Domain.Interfaces
         /// Validate folder move request
         /// </summary>
         Task<(bool IsValid, string ErrorMessage)> ValidateMoveFolderAsync(MoveFolderRequest request);
+        
+        /// <summary>
+        /// Get all folders across all Abunes (for public access)
+        /// </summary>
+        Task<List<Folder>> GetAllFoldersAsync();
+        
+        /// <summary>
+        /// Get all folder trees across all Abunes (for public access)
+        /// </summary>
+        Task<List<FolderTreeNode>> GetAllFolderTreesAsync();
     }
 }

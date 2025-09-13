@@ -40,9 +40,10 @@ namespace coptic_app_backend.Api.Controllers
         {
             try
             {
-                // Get all folders - for public access, we'll get folders for all Abunes
-                // This is a simplified approach - in production you might want to add a specific method
-                var folders = await _folderService.GetFolderTreeAsync(""); // Empty string to get all
+                _logger.LogInformation("Getting all folder trees from service");
+                // Get all folder trees across all Abunes
+                var folders = await _folderService.GetAllFolderTreesAsync();
+                _logger.LogInformation("Retrieved {Count} folder trees from service", folders.Count);
                 return Ok(folders);
             }
             catch (Exception ex)
@@ -95,8 +96,9 @@ namespace coptic_app_backend.Api.Controllers
         {
             try
             {
-                // Get root folders for all Abunes
-                var folders = await _folderService.GetRootFoldersAsync("");
+                // Get all folders and filter for root folders
+                var allFolders = await _folderService.GetAllFoldersAsync();
+                var folders = allFolders.Where(f => f.ParentId == null).ToList();
                 return Ok(folders);
             }
             catch (Exception ex)
@@ -144,8 +146,8 @@ namespace coptic_app_backend.Api.Controllers
         {
             try
             {
-                // Get folder tree for all Abunes
-                var tree = await _folderService.GetFolderTreeAsync("");
+                // Get all folder trees across all Abunes
+                var tree = await _folderService.GetAllFolderTreesAsync();
                 return Ok(tree);
             }
             catch (Exception ex)
@@ -204,8 +206,12 @@ namespace coptic_app_backend.Api.Controllers
                     return BadRequest("Search term is required");
                 }
 
-                // Search folders across all Abunes
-                var folders = await _folderService.SearchFoldersAsync("", searchTerm);
+                // Get all folders and filter by search term
+                var allFolders = await _folderService.GetAllFoldersAsync();
+                var folders = allFolders.Where(f => 
+                    f.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    (f.Description != null && f.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                ).ToList();
                 return Ok(folders);
             }
             catch (Exception ex)
