@@ -55,5 +55,10 @@ namespace coptic_app_backend.Domain.Interfaces
         /// Get media files by storage type
         /// </summary>
         Task<List<MediaFile>> GetMediaFilesByStorageTypeAsync(string storageType, MediaType? mediaType = null);
+        
+        /// <summary>
+        /// Get all media files by media type across all folders
+        /// </summary>
+        Task<List<MediaFile>> GetAllMediaFilesByTypeAsync(MediaType mediaType);
     }
 }

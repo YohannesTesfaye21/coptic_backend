@@ -243,6 +243,44 @@ namespace coptic_app_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get all media files by media type across all folders
+        /// </summary>
+        /// <param name="mediaType">Media type filter (0=Book, 1=Video, 2=Audio, 3=Other)</param>
+        /// <returns>List of media files of the specified type</returns>
+        [HttpGet("type/{mediaType}")]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<MediaFileInfo>>> GetMediaFilesByType(MediaType mediaType)
+        {
+            try
+            {
+                _logger.LogInformation("Getting media files by type: {MediaType}", mediaType);
+
+                // Get all media files of the specified type from database
+                var mediaFiles = await _mediaFileRepository.GetAllMediaFilesByTypeAsync(mediaType);
+                _logger.LogInformation("Retrieved {Count} files of type {MediaType} from database", mediaFiles.Count, mediaType);
+
+                // Convert to MediaFileInfo format
+                var files = mediaFiles.Select(f => new MediaFileInfo
+                {
+                    FileName = f.FileName,
+                    ObjectName = f.ObjectName,
+                    FileUrl = ConvertToFullUrl(f.FileUrl, f.ObjectName),
+                    FileSize = f.FileSize,
+                    LastModified = DateTimeOffset.FromUnixTimeSeconds(f.LastModified).DateTime,
+                    MediaType = f.MediaType,
+                    FolderId = f.FolderId
+                }).ToList();
+
+                return Ok(files);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting media files by type: {MediaType}", mediaType);
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Download a media file
         /// </summary>
         /// <param name="objectName">MinIO object name</param>

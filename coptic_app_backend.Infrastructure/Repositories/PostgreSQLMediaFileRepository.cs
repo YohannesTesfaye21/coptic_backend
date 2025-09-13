@@ -209,5 +209,21 @@ namespace coptic_app_backend.Infrastructure.Repositories
                 throw;
             }
         }
+
+        public async Task<List<MediaFile>> GetAllMediaFilesByTypeAsync(MediaType mediaType)
+        {
+            try
+            {
+                return await _context.MediaFiles
+                    .Where(f => f.MediaType == mediaType && f.IsActive)
+                    .OrderByDescending(f => f.UploadedAt)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all media files by type: {MediaType}", mediaType);
+                throw;
+            }
+        }
     }
 }

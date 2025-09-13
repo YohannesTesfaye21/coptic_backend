@@ -249,7 +249,32 @@ GET /api/Media/download/{objectName}
 
 **Response**: File stream with appropriate content type
 
-#### 3. Get Media File URL
+#### 3. Get Media Files by Type
+```http
+GET /api/Media/type/{mediaType}
+```
+
+**Description**: Gets all media files of a specific type across all folders.
+
+**Parameters**:
+- `mediaType` (int): Media type (0=Book, 1=Video, 2=Audio, 3=Other)
+
+**Response**:
+```json
+[
+  {
+    "fileName": "string",
+    "objectName": "string",
+    "fileUrl": "http://162.243.165.212:9000/coptic-files/...",
+    "fileSize": 1048576,
+    "lastModified": "2025-09-13T10:30:00Z",
+    "mediaType": 2,
+    "folderId": "string"
+  }
+]
+```
+
+#### 4. Get Media File URL
 ```http
 GET /api/Media/url/{objectName}
 ```
@@ -268,7 +293,7 @@ GET /api/Media/url/{objectName}
 
 ### POST/DELETE Endpoints (Authentication Required)
 
-#### 4. Upload Media File
+#### 5. Upload Media File
 ```http
 POST /api/Media/upload
 Authorization: Bearer <JWT_TOKEN>
@@ -295,7 +320,7 @@ Content-Type: multipart/form-data
 }
 ```
 
-#### 5. Delete Media File
+#### 6. Delete Media File
 ```http
 DELETE /api/Media/{objectName}
 Authorization: Bearer <JWT_TOKEN>
@@ -346,6 +371,10 @@ const folders = await response.json();
 // Get media files in a folder
 const mediaResponse = await fetch('http://162.243.165.212:5000/api/Media/folder/folder-id-here');
 const mediaFiles = await mediaResponse.json();
+
+// Get all audio files across all folders
+const audioFiles = await fetch('http://162.243.165.212:5000/api/Media/type/2');
+const audioMedia = await audioFiles.json();
 ```
 
 #### 2. Upload File
