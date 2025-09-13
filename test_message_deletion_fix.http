@@ -1,0 +1,50 @@
+### Test Message Deletion Fix
+### This script tests the conversion of replies to normal messages when original message is deleted
+
+### 1. Send an original message
+POST {{baseUrl}}/api/chat/send
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "recipientId": "{{recipientId}}",
+  "content": "This is the original message that will be deleted",
+  "messageType": 0
+}
+
+### 2. Reply to the original message (use the messageId from step 1)
+POST {{baseUrl}}/api/chat/reply
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "originalMessageId": "{{originalMessageId}}",
+  "content": "This is a reply to the original message"
+}
+
+### 3. Delete the original message (use the messageId from step 1)
+DELETE {{baseUrl}}/api/chat/messages/{{originalMessageId}}
+Authorization: Bearer {{token}}
+
+### 4. Try to reply to the deleted message (should succeed, but reply will be converted to normal message)
+POST {{baseUrl}}/api/chat/reply
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "originalMessageId": "{{originalMessageId}}",
+  "content": "This reply will be converted to a normal message since original was deleted"
+}
+
+### 5. Get conversation messages to verify:
+### - Original message is deleted (not visible)
+### - First reply is converted to normal message (no ReplyToMessageId)
+### - Second reply is also converted to normal message
+GET {{baseUrl}}/api/chat/conversations/{{recipientId}}/messages
+Authorization: Bearer {{token}}
+
+### Variables (replace with actual values):
+# @baseUrl = https://your-api-url.com
+# @token = your-jwt-token
+# @recipientId = recipient-user-id
+# @originalMessageId = message-id-from-step-1

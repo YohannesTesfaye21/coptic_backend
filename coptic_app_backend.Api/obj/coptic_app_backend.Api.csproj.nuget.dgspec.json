@@ -13,6 +13,7 @@
         "packagesPath": "/Users/m2pro/.nuget/packages/",
         "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/obj/",
         "projectStyle": "PackageReference",
+        "UsingMicrosoftNETSdk": false,
         "configFilePaths": [
           "/Users/m2pro/.nuget/NuGet/NuGet.Config"
         ],
@@ -106,6 +107,7 @@
         "packagesPath": "/Users/m2pro/.nuget/packages/",
         "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Application/obj/",
         "projectStyle": "PackageReference",
+        "UsingMicrosoftNETSdk": false,
         "configFilePaths": [
           "/Users/m2pro/.nuget/NuGet/NuGet.Config"
         ],
@@ -178,6 +180,7 @@
         "packagesPath": "/Users/m2pro/.nuget/packages/",
         "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/",
         "projectStyle": "PackageReference",
+        "UsingMicrosoftNETSdk": false,
         "configFilePaths": [
           "/Users/m2pro/.nuget/NuGet/NuGet.Config"
         ],
@@ -236,6 +239,7 @@
         "packagesPath": "/Users/m2pro/.nuget/packages/",
         "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Infrastructure/obj/",
         "projectStyle": "PackageReference",
+        "UsingMicrosoftNETSdk": false,
         "configFilePaths": [
           "/Users/m2pro/.nuget/NuGet/NuGet.Config"
         ],
@@ -277,6 +281,14 @@
             "AWSSDK.Core": {
               "target": "Package",
               "version": "[3.7.400.1, )"
+            },
+            "FirebaseAdmin": {
+              "target": "Package",
+              "version": "[2.4.0, )"
+            },
+            "Google.Apis.Auth": {
+              "target": "Package",
+              "version": "[1.64.0, )"
             },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",

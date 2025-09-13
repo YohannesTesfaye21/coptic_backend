@@ -106,8 +106,9 @@ namespace coptic_app_backend.Infrastructure.Services
         {
             try
             {
-                // Return the permanent public URL instead of presigned URL
-                var publicUrl = $"http://{_endpoint}/{_bucketName}/{Uri.EscapeDataString(fileName)}";
+                // Return the permanent public URL without additional encoding
+                // The fileName parameter is already the object name from MinIO
+                var publicUrl = $"http://{_endpoint}/{_bucketName}/{fileName}";
                 _logger.LogInformation("Generated public URL for file: {FileName} -> {Url}", fileName, publicUrl);
                 return publicUrl;
             }

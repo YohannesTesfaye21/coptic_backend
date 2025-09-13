@@ -1,0 +1,59 @@
+### Test Message Edit Fix
+### This script tests that editing a message preserves its original position and shows edit status
+
+### 1. Send an original message
+POST {{baseUrl}}/api/chat/send
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "recipientId": "{{recipientId}}",
+  "content": "This is the original message that will be edited",
+  "messageType": 0
+}
+
+### 2. Send another message to establish order
+POST {{baseUrl}}/api/chat/send
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "recipientId": "{{recipientId}}",
+  "content": "This is a second message",
+  "messageType": 0
+}
+
+### 3. Edit the first message (use the messageId from step 1)
+PUT {{baseUrl}}/api/chat/messages/{{messageId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "content": "This is the EDITED message - content changed but position preserved"
+}
+
+### 4. Get conversation messages to verify:
+### - Original message is still in its original position (first)
+### - Message shows isEdited: true
+### - Message shows editedAt timestamp
+### - Message shows editedBy user ID
+### - Second message is still in second position
+GET {{baseUrl}}/api/chat/conversations/{{recipientId}}/messages
+Authorization: Bearer {{token}}
+
+### 5. Try to edit a message that's too old (should fail)
+### Note: This will only work if you wait 24+ hours or modify the time limit in code
+PUT {{baseUrl}}/api/chat/messages/{{messageId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "content": "This should fail if message is too old"
+}
+
+### Variables (replace with actual values):
+# @baseUrl = https://your-api-url.com
+# @token = your-jwt-token
+# @recipientId = recipient-user-id
+# @messageId = message-id-from-step-1
+

@@ -136,3 +136,13 @@
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/obj/Debug/net8.0/coptic_app_backend.Api.pdb
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/obj/Debug/net8.0/coptic_app_backend.Api.genruntimeconfig.cache
 /Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/obj/Debug/net8.0/ref/coptic_app_backend.Api.dll
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/bin/Debug/net8.0/test_reply.json
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/bin/Debug/net8.0/Google.Apis.dll
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/bin/Debug/net8.0/Google.Apis.Auth.PlatformServices.dll
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/bin/Debug/net8.0/Google.Apis.Auth.dll
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/bin/Debug/net8.0/Google.Apis.Core.dll
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/bin/Debug/net8.0/System.Management.dll
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/bin/Debug/net8.0/runtimes/win/lib/net7.0/System.Management.dll
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/bin/Debug/net8.0/FirebaseAdmin.dll
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/bin/Debug/net8.0/Google.Api.Gax.dll
+/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/bin/Debug/net8.0/Google.Api.Gax.Rest.dll

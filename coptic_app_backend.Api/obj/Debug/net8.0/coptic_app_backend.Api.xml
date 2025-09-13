@@ -483,6 +483,211 @@
             <param name="fileName">File name to delete</param>
             <returns>Delete result</returns>
         </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FirebaseController.GetGoogleServicesJson">
+            <summary>
+            Download google-services.json for Android clients
+            </summary>
+            <returns>google-services.json file</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FirebaseController.GetGoogleServiceInfoPlist">
+            <summary>
+            Download GoogleService-Info.plist for iOS clients
+            </summary>
+            <returns>GoogleService-Info.plist file</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FirebaseController.GetFirebaseConfig">
+            <summary>
+            Get Firebase configuration info (without sensitive data)
+            </summary>
+            <returns>Firebase configuration status</returns>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.FolderController">
+            <summary>
+            Folder management controller for hierarchical folder structure
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.GetFolders">
+            <summary>
+            Get all folders for the current Abune's community in hierarchical structure
+            </summary>
+            <returns>Hierarchical list of folders</returns>
+            <response code="200">Folders retrieved successfully</response>
+            <response code="400">Abune ID not found in token</response>
+            <response code="403">Access denied - Abune only</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.GetFolder(System.String)">
+            <summary>
+            Get folder by ID
+            </summary>
+            <param name="id">Folder ID</param>
+            <returns>Folder details</returns>
+            <response code="200">Folder retrieved successfully</response>
+            <response code="404">Folder not found</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.GetRootFolders">
+            <summary>
+            Get root folders (folders with no parent)
+            </summary>
+            <returns>List of root folders</returns>
+            <response code="200">Root folders retrieved successfully</response>
+            <response code="400">Abune ID not found in token</response>
+            <response code="403">Access denied - Abune only</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.GetChildFolders(System.String)">
+            <summary>
+            Get child folders of a specific parent folder
+            </summary>
+            <param name="parentId">Parent folder ID</param>
+            <returns>List of child folders</returns>
+            <response code="200">Child folders retrieved successfully</response>
+            <response code="404">Parent folder not found</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.GetFolderTree">
+            <summary>
+            Get folder tree structure
+            </summary>
+            <returns>Hierarchical folder tree</returns>
+            <response code="200">Folder tree retrieved successfully</response>
+            <response code="400">Abune ID not found in token</response>
+            <response code="403">Access denied - Abune only</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.GetFolderPath(System.String)">
+            <summary>
+            Get folder path (breadcrumb) from root to specific folder
+            </summary>
+            <param name="id">Folder ID</param>
+            <returns>Folder path from root to folder</returns>
+            <response code="200">Folder path retrieved successfully</response>
+            <response code="404">Folder not found</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.SearchFolders(System.String)">
+            <summary>
+            Search folders by name or description
+            </summary>
+            <param name="searchTerm">Search term</param>
+            <returns>List of matching folders</returns>
+            <response code="200">Search results retrieved successfully</response>
+            <response code="400">Abune ID not found in token or invalid search term</response>
+            <response code="403">Access denied - Abune only</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.CreateFolder(coptic_app_backend.Domain.Models.CreateFolderRequest)">
+            <summary>
+            Create a new folder
+            </summary>
+            <param name="request">Folder creation request</param>
+            <returns>Created folder</returns>
+            <response code="201">Folder created successfully</response>
+            <response code="400">Invalid request data or validation failed</response>
+            <response code="403">Access denied - Abune only</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.UpdateFolder(System.String,coptic_app_backend.Domain.Models.UpdateFolderRequest)">
+            <summary>
+            Update an existing folder
+            </summary>
+            <param name="id">Folder ID</param>
+            <param name="request">Folder update request</param>
+            <returns>Updated folder</returns>
+            <response code="200">Folder updated successfully</response>
+            <response code="400">Invalid request data or validation failed</response>
+            <response code="404">Folder not found</response>
+            <response code="403">Access denied - Abune only</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.MoveFolder(coptic_app_backend.Domain.Models.MoveFolderRequest)">
+            <summary>
+            Move a folder to a new parent
+            </summary>
+            <param name="request">Folder move request</param>
+            <returns>Success status</returns>
+            <response code="200">Folder moved successfully</response>
+            <response code="400">Invalid request data or validation failed</response>
+            <response code="404">Folder not found</response>
+            <response code="403">Access denied - Abune only</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.DeleteFolder(System.String)">
+            <summary>
+            Delete a folder (soft delete)
+            </summary>
+            <param name="id">Folder ID</param>
+            <returns>Success status</returns>
+            <response code="200">Folder deleted successfully</response>
+            <response code="404">Folder not found</response>
+            <response code="403">Access denied - Abune only</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.FolderController.PermanentlyDeleteFolder(System.String)">
+            <summary>
+            Permanently delete a folder and all its children
+            </summary>
+            <param name="id">Folder ID</param>
+            <returns>Success status</returns>
+            <response code="200">Folder permanently deleted successfully</response>
+            <response code="404">Folder not found</response>
+            <response code="403">Access denied - Abune only</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.MediaController">
+            <summary>
+            Media upload controller for books, videos, and audio files
+            </summary>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.MediaController.UploadMedia(coptic_app_backend.Api.Controllers.MediaUploadRequest)">
+            <summary>
+            Upload a media file (book, video, or audio) to a specific folder
+            </summary>
+            <param name="request">Media upload request containing file, folder ID, and media type</param>
+            <returns>Upload result with file information</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.MediaController.GetMediaFilesInFolder(System.String,System.Nullable{coptic_app_backend.Domain.Models.MediaType})">
+            <summary>
+            Get all media files in a folder
+            </summary>
+            <param name="folderId">Folder ID</param>
+            <param name="mediaType">Optional media type filter</param>
+            <returns>List of media files in the folder</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.MediaController.GetMediaFilesByType(coptic_app_backend.Domain.Models.MediaType)">
+            <summary>
+            Get all media files by media type across all folders
+            </summary>
+            <param name="mediaType">Media type filter (0=Book, 1=Video, 2=Audio, 3=Other)</param>
+            <returns>List of media files of the specified type</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.MediaController.DownloadMediaFile(System.String)">
+            <summary>
+            Download a media file
+            </summary>
+            <param name="objectName">MinIO object name</param>
+            <returns>File stream</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.MediaController.GetMediaFileUrl(System.String)">
+            <summary>
+            Get a presigned URL for a media file
+            </summary>
+            <param name="objectName">MinIO object name</param>
+            <returns>Presigned URL</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.MediaController.DeleteMediaFile(System.String)">
+            <summary>
+            Delete a media file
+            </summary>
+            <param name="objectName">MinIO object name</param>
+            <returns>Delete result</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.MediaController.ConvertToFullUrl(System.String,System.String)">
+            <summary>
+            Convert relative URLs to full MinIO URLs
+            </summary>
+        </member>
         <member name="T:coptic_app_backend.Api.Controllers.UserController">
             <summary>
             User management controller with role-based access control
@@ -508,6 +713,11 @@
             <response code="401">Authentication required</response>
             <response code="404">User profile not found</response>
             <response code="500">Internal server error</response>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.UserController.SendNotification(coptic_app_backend.Api.Controllers.SendNotificationRequest)">
+            <summary>
+            Send notification without authentication - only requires device token
+            </summary>
         </member>
         <member name="T:coptic_app_backend.Api.Hubs.ChatHub">
             <summary>
@@ -661,6 +871,54 @@
             <inheritdoc />
         </member>
         <member name="M:coptic_app_backend.Api.Migrations.RemoveConversationIdColumn.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:coptic_app_backend.Api.Migrations.AddEditFieldsToChatMessage">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddEditFieldsToChatMessage.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddEditFieldsToChatMessage.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddEditFieldsToChatMessage.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:coptic_app_backend.Api.Migrations.AddFolderEntity">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddFolderEntity.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddFolderEntity.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddFolderEntity.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:coptic_app_backend.Api.Migrations.AddFileUploadEntities">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddFileUploadEntities.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddFileUploadEntities.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddFileUploadEntities.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:coptic_app_backend.Api.Migrations.AddMediaFileTable">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddMediaFileTable.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddMediaFileTable.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:coptic_app_backend.Api.Migrations.AddMediaFileTable.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
         <member name="T:coptic_app_backend.Api.Models.FileUploadRequest">
