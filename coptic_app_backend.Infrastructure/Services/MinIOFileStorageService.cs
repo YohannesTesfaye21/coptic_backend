@@ -294,11 +294,48 @@ namespace coptic_app_backend.Infrastructure.Services
                 {
                     _logger.LogInformation("Bucket already exists: {BucketName}", _bucketName);
                 }
+
+                // Set bucket policy for public read access
+                await SetBucketPublicReadPolicyAsync();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to ensure bucket exists: {BucketName}. Error: {ErrorMessage}", _bucketName, ex.Message);
                 throw;
+            }
+        }
+
+        private async Task SetBucketPublicReadPolicyAsync()
+        {
+            try
+            {
+                // Create a policy that allows public read access to all objects in the bucket
+                var policy = $@"{{
+                    ""Version"": ""2012-10-17"",
+                    ""Statement"": [
+                        {{
+                            ""Effect"": ""Allow"",
+                            ""Principal"": {{
+                                ""AWS"": [""*""]
+                            }},
+                            ""Action"": [""s3:GetObject""],
+                            ""Resource"": [""arn:aws:s3:::{_bucketName}/*""]
+                        }}
+                    ]
+                }}";
+
+                var setPolicyArgs = new SetPolicyArgs()
+                    .WithBucket(_bucketName)
+                    .WithPolicy(policy);
+
+                await _minioClient.SetPolicyAsync(setPolicyArgs);
+                _logger.LogInformation("Set public read policy for MinIO bucket: {BucketName}", _bucketName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error setting bucket policy for: {BucketName}", _bucketName);
+                // Don't throw here as the bucket might still work with authentication
+                _logger.LogWarning("Continuing without public read policy - files will require authentication");
             }
         }
 
