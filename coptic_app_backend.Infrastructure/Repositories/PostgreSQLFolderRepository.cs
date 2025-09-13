@@ -234,14 +234,18 @@ namespace coptic_app_backend.Infrastructure.Repositories
                     return false;
                 }
 
-                // Permanently delete all children first
-                await PermanentlyDeleteChildrenAsync(folderId);
+                // Get all descendants to delete
+                var foldersToDelete = new List<Folder>();
+                await GetAllDescendantsAsync(folderId, foldersToDelete);
+                
+                // Add the main folder to the list
+                foldersToDelete.Add(folder);
 
-                // Then delete the folder itself
-                _context.Folders.Remove(folder);
+                // Remove all folders in one transaction
+                _context.Folders.RemoveRange(foldersToDelete);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Folder permanently deleted successfully: {FolderId}", folderId);
+                _logger.LogInformation("Folder permanently deleted successfully: {FolderId} along with {Count} descendants", folderId, foldersToDelete.Count - 1);
                 return true;
             }
             catch (Exception ex)
@@ -444,7 +448,7 @@ namespace coptic_app_backend.Infrastructure.Repositories
             }
         }
 
-        private async Task PermanentlyDeleteChildrenAsync(string parentId)
+        private async Task GetAllDescendantsAsync(string parentId, List<Folder> descendants)
         {
             var children = await _context.Folders
                 .Where(f => f.ParentId == parentId)
@@ -452,8 +456,9 @@ namespace coptic_app_backend.Infrastructure.Repositories
 
             foreach (var child in children)
             {
-                await PermanentlyDeleteChildrenAsync(child.Id);
-                _context.Folders.Remove(child);
+                descendants.Add(child);
+                // Recursively get all descendants
+                await GetAllDescendantsAsync(child.Id, descendants);
             }
         }
 
