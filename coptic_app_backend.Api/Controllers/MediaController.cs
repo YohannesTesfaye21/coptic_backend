@@ -87,6 +87,120 @@ namespace coptic_app_backend.Api.Controllers
             return sanitized;
         }
 
+        /// <summary>
+        /// Get content type based on file extension
+        /// </summary>
+        /// <param name="fileName">File name</param>
+        /// <returns>Content type</returns>
+        private string GetContentType(string fileName)
+        {
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+            return extension switch
+            {
+                ".mp4" => "video/mp4",
+                ".avi" => "video/x-msvideo",
+                ".mov" => "video/quicktime",
+                ".wmv" => "video/x-ms-wmv",
+                ".flv" => "video/x-flv",
+                ".webm" => "video/webm",
+                ".mkv" => "video/x-matroska",
+                ".mp3" => "audio/mpeg",
+                ".wav" => "audio/wav",
+                ".ogg" => "audio/ogg",
+                ".m4a" => "audio/mp4",
+                ".aac" => "audio/aac",
+                ".flac" => "audio/flac",
+                ".pdf" => "application/pdf",
+                ".txt" => "text/plain",
+                ".doc" => "application/msword",
+                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".xls" => "application/vnd.ms-excel",
+                ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ".ppt" => "application/vnd.ms-powerpoint",
+                ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".bmp" => "image/bmp",
+                ".webp" => "image/webp",
+                _ => "application/octet-stream"
+            };
+        }
+
+        /// <summary>
+        /// Handle range requests for video/audio streaming
+        /// </summary>
+        /// <param name="fileStream">File stream</param>
+        /// <param name="contentType">Content type</param>
+        /// <param name="fileName">File name</param>
+        /// <param name="rangeHeader">Range header value</param>
+        /// <returns>Partial content response</returns>
+        private IActionResult HandleRangeRequest(Stream fileStream, string contentType, string fileName, string rangeHeader)
+        {
+            try
+            {
+                var fileLength = fileStream.Length;
+                var range = ParseRangeHeader(rangeHeader, fileLength);
+                
+                if (range == null)
+                {
+                    return BadRequest("Invalid range header");
+                }
+
+                Response.StatusCode = 206; // Partial Content
+                Response.Headers.Add("Content-Range", $"bytes {range.Value.Start}-{range.Value.End}/{fileLength}");
+                Response.Headers.Add("Content-Length", (range.Value.End - range.Value.Start + 1).ToString());
+
+                // Create a partial stream
+                var partialStream = new PartialStream(fileStream, range.Value.Start, range.Value.End - range.Value.Start + 1);
+                
+                return File(partialStream, contentType, fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling range request: {RangeHeader}", rangeHeader);
+                return StatusCode(500, new { error = "Error handling range request", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Parse range header
+        /// </summary>
+        /// <param name="rangeHeader">Range header value</param>
+        /// <param name="fileLength">File length</param>
+        /// <returns>Range object or null if invalid</returns>
+        private (long Start, long End)? ParseRangeHeader(string rangeHeader, long fileLength)
+        {
+            if (string.IsNullOrEmpty(rangeHeader) || !rangeHeader.StartsWith("bytes="))
+                return null;
+
+            var range = rangeHeader.Substring(6); // Remove "bytes="
+            var parts = range.Split('-');
+            
+            if (parts.Length != 2)
+                return null;
+
+            long start = 0;
+            long end = fileLength - 1;
+
+            if (!string.IsNullOrEmpty(parts[0]))
+            {
+                if (!long.TryParse(parts[0], out start))
+                    return null;
+            }
+
+            if (!string.IsNullOrEmpty(parts[1]))
+            {
+                if (!long.TryParse(parts[1], out end))
+                    return null;
+            }
+
+            if (start < 0 || end >= fileLength || start > end)
+                return null;
+
+            return (start, end);
+        }
+
         #region Media Upload Endpoints
 
         /// <summary>
@@ -368,12 +482,28 @@ namespace coptic_app_backend.Api.Controllers
                     if (mediaFile.StorageType == "MinIO")
                     {
                         // Download from MinIO
-                        fileStream = await _mediaService.DownloadFileAsync(decodedObjectName);
+                        try
+                        {
+                            fileStream = await _mediaService.DownloadFileAsync(decodedObjectName);
+                        }
+                        catch (Exception minioEx)
+                        {
+                            _logger.LogError(minioEx, "MinIO download failed for: {ObjectName}", decodedObjectName);
+                            return StatusCode(500, new { error = "Failed to download file from MinIO", message = minioEx.Message });
+                        }
                     }
                     else
                     {
                         // Download from local storage
-                        fileStream = await _fileStorageService.DownloadFileAsync(decodedObjectName);
+                        try
+                        {
+                            fileStream = await _fileStorageService.DownloadFileAsync(decodedObjectName);
+                        }
+                        catch (Exception localEx)
+                        {
+                            _logger.LogError(localEx, "Local storage download failed for: {ObjectName}", decodedObjectName);
+                            return StatusCode(500, new { error = "Failed to download file from local storage", message = localEx.Message });
+                        }
                     }
                 }
                 else
@@ -388,11 +518,33 @@ namespace coptic_app_backend.Api.Controllers
                     catch (Exception minioEx)
                     {
                         _logger.LogWarning(minioEx, "MinIO download failed, trying local storage: {ObjectName}", decodedObjectName);
-                        fileStream = await _fileStorageService.DownloadFileAsync(decodedObjectName);
+                        try
+                        {
+                            fileStream = await _fileStorageService.DownloadFileAsync(decodedObjectName);
+                        }
+                        catch (Exception localEx)
+                        {
+                            _logger.LogError(localEx, "Both MinIO and local storage download failed for: {ObjectName}", decodedObjectName);
+                            return StatusCode(500, new { error = "Failed to download file from any storage", message = "File not found in MinIO or local storage" });
+                        }
                     }
                 }
 
-                return File(fileStream, "application/octet-stream", fileName);
+                // Determine content type based on file extension
+                string contentType = GetContentType(fileName);
+                
+                // Enable range requests for video streaming
+                Response.Headers.Add("Accept-Ranges", "bytes");
+                Response.Headers.Add("Cache-Control", "public, max-age=3600");
+                
+                // Check if this is a range request (for video streaming)
+                var rangeHeader = Request.Headers["Range"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(rangeHeader) && (contentType.StartsWith("video/") || contentType.StartsWith("audio/")))
+                {
+                    return HandleRangeRequest(fileStream, contentType, fileName, rangeHeader);
+                }
+                
+                return File(fileStream, contentType, fileName);
             }
             catch (Exception ex)
             {
@@ -734,6 +886,72 @@ namespace coptic_app_backend.Api.Controllers
     {
         public bool IsValid { get; set; }
         public string ErrorMessage { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Stream that provides a partial view of another stream
+    /// </summary>
+    public class PartialStream : Stream
+    {
+        private readonly Stream _baseStream;
+        private readonly long _start;
+        private readonly long _length;
+        private long _position;
+
+        public PartialStream(Stream baseStream, long start, long length)
+        {
+            _baseStream = baseStream;
+            _start = start;
+            _length = length;
+            _position = 0;
+        }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => true;
+        public override bool CanWrite => false;
+        public override long Length => _length;
+        public override long Position
+        {
+            get => _position;
+            set => Seek(value, SeekOrigin.Begin);
+        }
+
+        public override void Flush() => _baseStream.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (_position >= _length)
+                return 0;
+
+            var remaining = _length - _position;
+            var bytesToRead = (int)Math.Min(count, remaining);
+
+            _baseStream.Position = _start + _position;
+            var bytesRead = _baseStream.Read(buffer, offset, bytesToRead);
+            _position += bytesRead;
+
+            return bytesRead;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            long newPosition = origin switch
+            {
+                SeekOrigin.Begin => offset,
+                SeekOrigin.Current => _position + offset,
+                SeekOrigin.End => _length + offset,
+                _ => throw new ArgumentException("Invalid seek origin")
+            };
+
+            if (newPosition < 0 || newPosition > _length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            _position = newPosition;
+            return _position;
+        }
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     #endregion

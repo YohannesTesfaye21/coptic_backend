@@ -647,6 +647,31 @@
             <param name="filename">Original filename</param>
             <returns>Sanitized filename</returns>
         </member>
+        <member name="M:coptic_app_backend.Api.Controllers.MediaController.GetContentType(System.String)">
+            <summary>
+            Get content type based on file extension
+            </summary>
+            <param name="fileName">File name</param>
+            <returns>Content type</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.MediaController.HandleRangeRequest(System.IO.Stream,System.String,System.String,System.String)">
+            <summary>
+            Handle range requests for video/audio streaming
+            </summary>
+            <param name="fileStream">File stream</param>
+            <param name="contentType">Content type</param>
+            <param name="fileName">File name</param>
+            <param name="rangeHeader">Range header value</param>
+            <returns>Partial content response</returns>
+        </member>
+        <member name="M:coptic_app_backend.Api.Controllers.MediaController.ParseRangeHeader(System.String,System.Int64)">
+            <summary>
+            Parse range header
+            </summary>
+            <param name="rangeHeader">Range header value</param>
+            <param name="fileLength">File length</param>
+            <returns>Range object or null if invalid</returns>
+        </member>
         <member name="M:coptic_app_backend.Api.Controllers.MediaController.UploadMedia(coptic_app_backend.Api.Controllers.MediaUploadRequest)">
             <summary>
             Upload a media file (book, video, or audio) to a specific folder
@@ -693,6 +718,11 @@
         <member name="M:coptic_app_backend.Api.Controllers.MediaController.ConvertToFullUrl(System.String,System.String)">
             <summary>
             Convert relative URLs to full MinIO URLs
+            </summary>
+        </member>
+        <member name="T:coptic_app_backend.Api.Controllers.PartialStream">
+            <summary>
+            Stream that provides a partial view of another stream
             </summary>
         </member>
         <member name="T:coptic_app_backend.Api.Controllers.UserController">

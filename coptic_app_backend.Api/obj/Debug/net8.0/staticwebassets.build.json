@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "Uf4q422N06wXBaKg5XLu/BNAgM1NP0SoRfkLQr0m8oo=",
+  "Hash": "QJsl1MznCULok5MuthW6JwE9u/2XesfPyA9hH4xpzEg=",
   "Source": "coptic_app_backend.Api",
   "BasePath": "_content/coptic_app_backend.Api",
   "Mode": "Default",
@@ -53,6 +53,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot/uploads/2025-09-06/Screenshot 2025-08-28 at 22.30.02_20250906204410_5d53be46.png"
+    },
+    {
+      "Identity": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/wwwroot/uploads/general/2025-09-13/23- Book of Revelation Chapter (19_11-21) _ Chapter (20_1-6)_20250913_113001_d550b2cb.mp4",
+      "SourceId": "coptic_app_backend.Api",
+      "SourceType": "Discovered",
+      "ContentRoot": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/wwwroot/",
+      "BasePath": "_content/coptic_app_backend.Api",
+      "RelativePath": "uploads/general/2025-09-13/23- Book of Revelation Chapter (19_11-21) _ Chapter (20_1-6)_20250913_113001_d550b2cb.mp4",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/uploads/general/2025-09-13/23- Book of Revelation Chapter (19_11-21) _ Chapter (20_1-6)_20250913_113001_d550b2cb.mp4"
     },
     {
       "Identity": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Api/wwwroot/uploads/general/2025-09-13/26- Book of Revelation _ Ch 22 (4-21)_20250913_025957_76074990.mp4",
