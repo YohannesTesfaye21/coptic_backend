@@ -106,19 +106,16 @@ namespace coptic_app_backend.Infrastructure.Services
         {
             try
             {
-                // Generate a presigned URL that works regardless of bucket permissions
-                var presignedUrlArgs = new PresignedGetObjectArgs()
-                    .WithBucket(_bucketName)
-                    .WithObject(fileName)
-                    .WithExpiry(7 * 24 * 60 * 60); // 7 days expiry
-
-                var presignedUrl = await _minioClient.PresignedGetObjectAsync(presignedUrlArgs);
-                _logger.LogInformation("Generated presigned URL for file: {FileName} -> {Url}", fileName, presignedUrl);
-                return presignedUrl;
+                // Generate a direct public URL for direct access (no authentication required)
+                var protocol = _endpoint.Contains("localhost") || _endpoint.Contains("127.0.0.1") ? "http" : "http";
+                var publicUrl = $"{protocol}://{_endpoint}/{_bucketName}/{fileName}";
+                
+                _logger.LogInformation("Generated public URL for file: {FileName} -> {Url}", fileName, publicUrl);
+                return publicUrl;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to get presigned URL for: {FileName}", fileName);
+                _logger.LogError(ex, "Failed to get public URL for: {FileName}", fileName);
                 throw new Exception("Failed to get file URL", ex);
             }
         }
@@ -300,7 +297,8 @@ namespace coptic_app_backend.Infrastructure.Services
                     _logger.LogInformation("Bucket already exists: {BucketName}", _bucketName);
                 }
 
-                // Note: Using presigned URLs instead of public bucket policy
+                // Set public read policy for direct access to files
+                await SetBucketPublicReadPolicyAsync();
             }
             catch (Exception ex)
             {
