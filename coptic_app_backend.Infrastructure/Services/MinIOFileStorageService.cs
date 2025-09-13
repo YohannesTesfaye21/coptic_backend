@@ -106,15 +106,19 @@ namespace coptic_app_backend.Infrastructure.Services
         {
             try
             {
-                // Return the permanent public URL without additional encoding
-                // The fileName parameter is already the object name from MinIO
-                var publicUrl = $"http://{_endpoint}/{_bucketName}/{fileName}";
-                _logger.LogInformation("Generated public URL for file: {FileName} -> {Url}", fileName, publicUrl);
-                return publicUrl;
+                // Generate a presigned URL that works regardless of bucket permissions
+                var presignedUrlArgs = new PresignedGetObjectArgs()
+                    .WithBucket(_bucketName)
+                    .WithObject(fileName)
+                    .WithExpiry(24 * 60 * 60); // 24 hours expiry
+
+                var presignedUrl = await _minioClient.PresignedGetObjectAsync(presignedUrlArgs);
+                _logger.LogInformation("Generated presigned URL for file: {FileName} -> {Url}", fileName, presignedUrl);
+                return presignedUrl;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to get file URL for: {FileName}", fileName);
+                _logger.LogError(ex, "Failed to get presigned URL for: {FileName}", fileName);
                 throw new Exception("Failed to get file URL", ex);
             }
         }
@@ -296,8 +300,7 @@ namespace coptic_app_backend.Infrastructure.Services
                     _logger.LogInformation("Bucket already exists: {BucketName}", _bucketName);
                 }
 
-                // Set bucket policy for public read access
-                await SetBucketPublicReadPolicyAsync();
+                // Note: Using presigned URLs instead of public bucket policy
             }
             catch (Exception ex)
             {

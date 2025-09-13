@@ -13,7 +13,6 @@
         "packagesPath": "/Users/m2pro/.nuget/packages/",
         "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Application/obj/",
         "projectStyle": "PackageReference",
-        "UsingMicrosoftNETSdk": false,
         "configFilePaths": [
           "/Users/m2pro/.nuget/NuGet/NuGet.Config"
         ],
@@ -86,7 +85,6 @@
         "packagesPath": "/Users/m2pro/.nuget/packages/",
         "outputPath": "/Users/m2pro/RiderProjects/coptic_app_backend/coptic_app_backend.Domain/obj/",
         "projectStyle": "PackageReference",
-        "UsingMicrosoftNETSdk": false,
         "configFilePaths": [
           "/Users/m2pro/.nuget/NuGet/NuGet.Config"
         ],
