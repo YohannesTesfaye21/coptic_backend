@@ -202,7 +202,12 @@ if (builder.Environment.IsProduction())
 }
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -317,6 +322,8 @@ builder.Services.AddHttpClient();
             // Configure infrastructure services (PostgreSQL implementations)
             builder.Services.AddScoped<IChatRepository, PostgreSQLChatRepository>();
             builder.Services.AddScoped<IUserRepository, PostgreSQLUserRepository>();
+            builder.Services.AddScoped<IFolderRepository, PostgreSQLFolderRepository>();
+            builder.Services.AddScoped<IMediaFileRepository, PostgreSQLMediaFileRepository>();
             
             // Configure AwsCognitoService with JWT settings
             builder.Services.AddScoped<ICognitoUserService>(provider => 
@@ -333,10 +340,30 @@ builder.Services.AddHttpClient();
             builder.Services.AddScoped<IAbuneService, AbuneService>();
             builder.Services.AddScoped<INotificationService, FCMNotificationService>();
             builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+            builder.Services.AddScoped<MinIOFileStorageService>();
+            builder.Services.AddScoped<IMediaStorageService, MinIOFileStorageService>();
 
 // Configure application services
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IFolderService, FolderService>();
+
+// Configure large file upload support
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 5L * 1024 * 1024 * 1024; // 5GB
+    options.ValueLengthLimit = int.MaxValue;
+    options.ValueCountLimit = int.MaxValue;
+    options.KeyLengthLimit = int.MaxValue;
+});
+
+// Configure Kestrel for large file uploads
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 5L * 1024 * 1024 * 1024; // 5GB
+    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(30); // 30 minutes for large uploads
+    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(2); // 2 minutes for headers
+});
 
 // Configure CORS
 builder.Services.AddCors(options =>

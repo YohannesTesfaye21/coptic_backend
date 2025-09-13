@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using coptic_app_backend.Infrastructure.Data;
@@ -11,9 +12,11 @@ using coptic_app_backend.Infrastructure.Data;
 namespace coptic_app_backend.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250912070232_AddFolderEntity")]
+    partial class AddFolderEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -262,96 +265,6 @@ namespace coptic_app_backend.Api.Migrations
                     b.ToTable("Folders");
                 });
 
-            modelBuilder.Entity("coptic_app_backend.Domain.Models.MediaFile", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)");
-
-                    b.Property<string>("AbuneId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)");
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<long>("FileSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("FileUrl")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("FolderId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<long>("LastModified")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("MediaType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ObjectName")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("StorageType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<long>("UploadedAt")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("UploadedBy")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AbuneId");
-
-                    b.HasIndex("FileName");
-
-                    b.HasIndex("FolderId");
-
-                    b.HasIndex("IsActive");
-
-                    b.HasIndex("LastModified");
-
-                    b.HasIndex("MediaType");
-
-                    b.HasIndex("ObjectName");
-
-                    b.HasIndex("StorageType");
-
-                    b.HasIndex("UploadedAt");
-
-                    b.HasIndex("UploadedBy");
-
-                    b.ToTable("MediaFiles");
-                });
-
             modelBuilder.Entity("coptic_app_backend.Domain.Models.User", b =>
                 {
                     b.Property<string>("Id")
@@ -539,33 +452,6 @@ namespace coptic_app_backend.Api.Migrations
                     b.Navigation("CreatedByUser");
 
                     b.Navigation("Parent");
-                });
-
-            modelBuilder.Entity("coptic_app_backend.Domain.Models.MediaFile", b =>
-                {
-                    b.HasOne("coptic_app_backend.Domain.Models.User", "Abune")
-                        .WithMany()
-                        .HasForeignKey("AbuneId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("coptic_app_backend.Domain.Models.Folder", "Folder")
-                        .WithMany()
-                        .HasForeignKey("FolderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("coptic_app_backend.Domain.Models.User", "UploadedByUser")
-                        .WithMany()
-                        .HasForeignKey("UploadedBy")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Abune");
-
-                    b.Navigation("Folder");
-
-                    b.Navigation("UploadedByUser");
                 });
 
             modelBuilder.Entity("coptic_app_backend.Domain.Models.User", b =>
