@@ -416,6 +416,38 @@ namespace coptic_app_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Test MinIO connectivity
+        /// </summary>
+        /// <returns>MinIO connection status</returns>
+        [HttpGet("test-minio")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TestMinIO()
+        {
+            try
+            {
+                _logger.LogInformation("Testing MinIO connectivity");
+                
+                // Try to list objects in the bucket
+                var objects = await _mediaService.ListObjectsAsync();
+                
+                return Ok(new { 
+                    status = "MinIO is accessible", 
+                    objectCount = objects.Count,
+                    message = "MinIO connection successful"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "MinIO connectivity test failed");
+                return StatusCode(500, new { 
+                    status = "MinIO connection failed", 
+                    error = ex.Message,
+                    message = "MinIO is not accessible"
+                });
+            }
+        }
+
+        /// <summary>
         /// Get all media files by media type across all folders
         /// </summary>
         /// <param name="mediaType">Media type filter (0=Book, 1=Video, 2=Audio, 3=Other)</param>
