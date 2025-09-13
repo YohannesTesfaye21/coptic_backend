@@ -225,5 +225,25 @@ namespace coptic_app_backend.Infrastructure.Repositories
                 throw;
             }
         }
+
+        public async Task<List<MediaFile>> GetAllMediaFilesAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Getting all media files from database");
+                var allFiles = await _context.MediaFiles
+                    .Where(f => f.IsActive)
+                    .OrderBy(f => f.UploadedAt)
+                    .ToListAsync();
+                
+                _logger.LogInformation("Retrieved {Count} media files from database", allFiles.Count);
+                return allFiles;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all media files");
+                throw;
+            }
+        }
     }
 }

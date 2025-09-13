@@ -60,5 +60,10 @@ namespace coptic_app_backend.Domain.Interfaces
         /// Get all media files by media type across all folders
         /// </summary>
         Task<List<MediaFile>> GetAllMediaFilesByTypeAsync(MediaType mediaType);
+        
+        /// <summary>
+        /// Get all media files across all folders and Abunes
+        /// </summary>
+        Task<List<MediaFile>> GetAllMediaFilesAsync();
     }
 }

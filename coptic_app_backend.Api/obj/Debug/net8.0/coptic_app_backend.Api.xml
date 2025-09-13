@@ -640,6 +640,13 @@
             Media upload controller for books, videos, and audio files
             </summary>
         </member>
+        <member name="M:coptic_app_backend.Api.Controllers.MediaController.SanitizeFilename(System.String)">
+            <summary>
+            Sanitize filename to avoid issues with spaces and special characters
+            </summary>
+            <param name="filename">Original filename</param>
+            <returns>Sanitized filename</returns>
+        </member>
         <member name="M:coptic_app_backend.Api.Controllers.MediaController.UploadMedia(coptic_app_backend.Api.Controllers.MediaUploadRequest)">
             <summary>
             Upload a media file (book, video, or audio) to a specific folder
@@ -671,10 +678,10 @@
         </member>
         <member name="M:coptic_app_backend.Api.Controllers.MediaController.GetMediaFileUrl(System.String)">
             <summary>
-            Get a presigned URL for a media file
+            Get a download URL for a media file
             </summary>
-            <param name="objectName">MinIO object name</param>
-            <returns>Presigned URL</returns>
+            <param name="objectName">MinIO object name or filename</param>
+            <returns>Download URL</returns>
         </member>
         <member name="M:coptic_app_backend.Api.Controllers.MediaController.DeleteMediaFile(System.String)">
             <summary>

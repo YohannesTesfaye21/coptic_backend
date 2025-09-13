@@ -33,6 +33,60 @@ namespace coptic_app_backend.Api.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Sanitize filename to avoid issues with spaces and special characters
+        /// </summary>
+        /// <param name="filename">Original filename</param>
+        /// <returns>Sanitized filename</returns>
+        private string SanitizeFilename(string filename)
+        {
+            if (string.IsNullOrEmpty(filename))
+                return filename;
+
+            // Replace spaces with underscores and remove other problematic characters
+            var sanitized = filename
+                .Replace(" ", "_")
+                .Replace("(", "")
+                .Replace(")", "")
+                .Replace("[", "")
+                .Replace("]", "")
+                .Replace("{", "")
+                .Replace("}", "")
+                .Replace("&", "and")
+                .Replace("+", "plus")
+                .Replace("=", "equals")
+                .Replace("?", "")
+                .Replace("#", "")
+                .Replace("%", "")
+                .Replace("@", "at")
+                .Replace("!", "")
+                .Replace("$", "")
+                .Replace("^", "")
+                .Replace("*", "")
+                .Replace("|", "")
+                .Replace("\\", "")
+                .Replace("/", "_")
+                .Replace(":", "")
+                .Replace(";", "")
+                .Replace("\"", "")
+                .Replace("'", "")
+                .Replace("<", "")
+                .Replace(">", "")
+                .Replace(",", "")
+                .Replace(".", "_");
+
+            // Remove multiple consecutive underscores
+            while (sanitized.Contains("__"))
+            {
+                sanitized = sanitized.Replace("__", "_");
+            }
+
+            // Remove leading/trailing underscores
+            sanitized = sanitized.Trim('_');
+
+            return sanitized;
+        }
+
         #region Media Upload Endpoints
 
         /// <summary>
@@ -94,6 +148,11 @@ namespace coptic_app_backend.Api.Controllers
                     return BadRequest(validationResult.ErrorMessage);
                 }
 
+                // Sanitize filename for object storage (but keep original for display)
+                var originalFileName = request.File.FileName;
+                var sanitizedFileName = SanitizeFilename(originalFileName);
+                _logger.LogInformation("Original filename: {Original}, Sanitized: {Sanitized}", originalFileName, sanitizedFileName);
+
                 // Upload the file - try MinIO first, fallback to local storage
                 using var stream = request.File.OpenReadStream();
                 string objectName;
@@ -104,21 +163,21 @@ namespace coptic_app_backend.Api.Controllers
                     _logger.LogInformation("Attempting to upload to MinIO...");
                     objectName = await _mediaService.UploadMediaFileAsync(
                         stream,
-                        request.File.FileName,
+                        sanitizedFileName,
                         request.File.ContentType,
                         request.FolderId,
                         request.MediaType
                     );
 
-                    // Get presigned URL
-                    fileUrl = await _mediaService.GetFileUrlAsync(objectName);
+                    // Generate download URL instead of presigned URL
+                    fileUrl = $"{Request.Scheme}://{Request.Host}/api/Media/download/{Uri.EscapeDataString(objectName)}";
                     _logger.LogInformation("Successfully uploaded to MinIO: {ObjectName}", objectName);
                     
                     // Save file record to database
                     var mediaFile = new MediaFile
                     {
-                        FileName = request.File.FileName,
-                        ObjectName = objectName,
+                        FileName = originalFileName, // Store original filename for display
+                        ObjectName = objectName,     // Store sanitized object name for storage
                         FileUrl = fileUrl,
                         FileSize = request.File.Length,
                         ContentType = request.File.ContentType,
@@ -141,7 +200,7 @@ namespace coptic_app_backend.Api.Controllers
                     stream.Position = 0; // Reset stream position
                     objectName = await _fileStorageService.UploadFileAsync(
                         stream,
-                        request.File.FileName,
+                        sanitizedFileName,
                         request.File.ContentType
                     );
                     
@@ -152,8 +211,8 @@ namespace coptic_app_backend.Api.Controllers
                     // Save file record to database
                     var mediaFile = new MediaFile
                     {
-                        FileName = request.File.FileName,
-                        ObjectName = objectName,
+                        FileName = originalFileName, // Store original filename for display
+                        ObjectName = objectName,     // Store sanitized object name for storage
                         FileUrl = fileUrl,
                         FileSize = request.File.Length,
                         ContentType = request.File.ContentType,
@@ -296,7 +355,7 @@ namespace coptic_app_backend.Api.Controllers
                 _logger.LogInformation("Download request for object: {ObjectName} (decoded: {DecodedObjectName})", objectName, decodedObjectName);
 
                 // First try to find the file in the database to determine storage type
-                var mediaFiles = await _mediaFileRepository.GetMediaFilesByFolderIdAsync("", null);
+                var mediaFiles = await _mediaFileRepository.GetAllMediaFilesAsync();
                 var mediaFile = mediaFiles.FirstOrDefault(f => f.ObjectName == decodedObjectName);
                 
                 Stream fileStream;
@@ -343,18 +402,49 @@ namespace coptic_app_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Get a presigned URL for a media file
+        /// Get a download URL for a media file
         /// </summary>
-        /// <param name="objectName">MinIO object name</param>
-        /// <returns>Presigned URL</returns>
+        /// <param name="objectName">MinIO object name or filename</param>
+        /// <returns>Download URL</returns>
         [HttpGet("url/{objectName}")]
         [AllowAnonymous]
         public async Task<ActionResult<string>> GetMediaFileUrl(string objectName)
         {
             try
             {
-                var fileUrl = await _mediaService.GetFileUrlAsync(objectName);
-                return Ok(new { url = fileUrl });
+                // Decode the object name
+                var decodedObjectName = Uri.UnescapeDataString(objectName);
+                _logger.LogInformation("Getting URL for object: {ObjectName}", decodedObjectName);
+
+                // First, try to find the file in the database by filename or object name
+                var mediaFile = await _mediaFileRepository.GetMediaFileByObjectNameAsync(decodedObjectName);
+                
+                string actualObjectName = decodedObjectName;
+                
+                if (mediaFile == null)
+                {
+                    // If not found by object name, try to find by filename
+                    var files = await _mediaFileRepository.GetAllMediaFilesAsync();
+                    mediaFile = files.FirstOrDefault(f => f.FileName == decodedObjectName);
+                    
+                    if (mediaFile != null)
+                    {
+                        actualObjectName = mediaFile.ObjectName;
+                        _logger.LogInformation("Found file by filename, using object name: {ObjectName}", actualObjectName);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("File not found in database: {ObjectName}", decodedObjectName);
+                        return NotFound("File not found");
+                    }
+                }
+
+                // Return download URL instead of presigned URL
+                // This uses the download endpoint which works reliably
+                var downloadUrl = $"{Request.Scheme}://{Request.Host}/api/Media/download/{Uri.EscapeDataString(actualObjectName)}";
+                _logger.LogInformation("Generated download URL for: {ObjectName} -> {Url}", actualObjectName, downloadUrl);
+                
+                return Ok(new { url = downloadUrl });
             }
             catch (Exception ex)
             {
