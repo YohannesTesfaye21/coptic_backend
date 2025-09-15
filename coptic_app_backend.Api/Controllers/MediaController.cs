@@ -128,7 +128,7 @@ namespace coptic_app_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Handle range requests for video/audio streaming
+        /// Handle range requests for video/audio streaming with mobile optimization
         /// </summary>
         /// <param name="fileStream">File stream</param>
         /// <param name="contentType">Content type</param>
@@ -147,12 +147,34 @@ namespace coptic_app_backend.Api.Controllers
                     return BadRequest("Invalid range header");
                 }
 
+                // Mobile optimization: limit chunk size for better performance
+                const long maxChunkSize = 2 * 1024 * 1024; // 2MB chunks for mobile
+                var chunkSize = range.Value.End - range.Value.Start + 1;
+                
+                if (chunkSize > maxChunkSize)
+                {
+                    range = (range.Value.Start, range.Value.Start + maxChunkSize - 1);
+                    chunkSize = maxChunkSize;
+                }
+
                 Response.StatusCode = 206; // Partial Content
                 Response.Headers["Content-Range"] = $"bytes {range.Value.Start}-{range.Value.End}/{fileLength}";
-                Response.Headers["Content-Length"] = (range.Value.End - range.Value.Start + 1).ToString();
+                Response.Headers["Content-Length"] = chunkSize.ToString();
+                
+                // Mobile streaming headers
+                Response.Headers["Accept-Ranges"] = "bytes";
+                Response.Headers["Cache-Control"] = "public, max-age=3600";
+                Response.Headers["Content-Disposition"] = "inline";
+                
+                // Add streaming-specific headers for mobile
+                if (contentType.StartsWith("video/"))
+                {
+                    Response.Headers["X-Content-Type-Options"] = "nosniff";
+                    Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+                }
 
-                // Create a partial stream
-                var partialStream = new PartialStream(fileStream, range.Value.Start, range.Value.End - range.Value.Start + 1);
+                // Create a partial stream with buffering for mobile
+                var partialStream = new BufferedPartialStream(fileStream, range.Value.Start, chunkSize);
                 
                 return File(partialStream, contentType, fileName);
             }
@@ -481,6 +503,118 @@ namespace coptic_app_backend.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting media files by type: {MediaType}", mediaType);
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Stream a media file with mobile optimization
+        /// </summary>
+        /// <param name="objectName">MinIO object name</param>
+        /// <returns>File stream</returns>
+        [HttpGet("stream/{objectName}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> StreamMediaFile(string objectName)
+        {
+            try
+            {
+                // URL decode the object name
+                var decodedObjectName = Uri.UnescapeDataString(objectName);
+                _logger.LogInformation("Stream request for object: {ObjectName} (decoded: {DecodedObjectName})", objectName, decodedObjectName);
+
+                // First try to find the file in the database to determine storage type
+                var mediaFiles = await _mediaFileRepository.GetAllMediaFilesAsync();
+                var mediaFile = mediaFiles.FirstOrDefault(f => f.ObjectName == decodedObjectName);
+                
+                Stream fileStream;
+                string fileName = Path.GetFileName(decodedObjectName);
+                
+                if (mediaFile != null)
+                {
+                    _logger.LogInformation("Found file in database: {ObjectName}, StorageType: {StorageType}", decodedObjectName, mediaFile.StorageType);
+                    
+                    if (mediaFile.StorageType == "MinIO")
+                    {
+                        // Download from MinIO
+                        try
+                        {
+                            fileStream = await _mediaService.DownloadFileAsync(decodedObjectName);
+                        }
+                        catch (Exception minioEx)
+                        {
+                            _logger.LogError(minioEx, "MinIO download failed for: {ObjectName}", decodedObjectName);
+                            return StatusCode(500, new { error = "Failed to download file from MinIO", message = minioEx.Message });
+                        }
+                    }
+                    else
+                    {
+                        // Download from local storage
+                        try
+                        {
+                            fileStream = await _fileStorageService.DownloadFileAsync(decodedObjectName);
+                        }
+                        catch (Exception localEx)
+                        {
+                            _logger.LogError(localEx, "Local storage download failed for: {ObjectName}", decodedObjectName);
+                            return StatusCode(500, new { error = "Failed to download file from local storage", message = localEx.Message });
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("File not found in database, trying MinIO first: {ObjectName}", decodedObjectName);
+                    
+                    // Fallback: try MinIO first, then local storage
+                    try
+                    {
+                        fileStream = await _mediaService.DownloadFileAsync(decodedObjectName);
+                    }
+                    catch (Exception minioEx)
+                    {
+                        _logger.LogWarning(minioEx, "MinIO download failed, trying local storage: {ObjectName}", decodedObjectName);
+                        try
+                        {
+                            fileStream = await _fileStorageService.DownloadFileAsync(decodedObjectName);
+                        }
+                        catch (Exception localEx)
+                        {
+                            _logger.LogError(localEx, "Both MinIO and local storage download failed for: {ObjectName}", decodedObjectName);
+                            return StatusCode(500, new { error = "Failed to download file from any storage", message = "File not found in MinIO or local storage" });
+                        }
+                    }
+                }
+
+                // Determine content type based on file extension
+                string contentType = GetContentType(fileName);
+                
+                // Mobile-optimized headers for streaming
+                Response.Headers["Accept-Ranges"] = "bytes";
+                Response.Headers["Cache-Control"] = "public, max-age=86400"; // 24 hours cache
+                Response.Headers["ETag"] = $"\"{decodedObjectName.GetHashCode()}\"";
+                Response.Headers["Last-Modified"] = DateTime.UtcNow.ToString("R");
+                
+                // For mobile streaming, don't force download - let browser handle it
+                if (contentType.StartsWith("video/") || contentType.StartsWith("audio/"))
+                {
+                    Response.Headers["Content-Disposition"] = "inline";
+                }
+                else
+                {
+                    Response.Headers["Content-Disposition"] = $"attachment; filename=\"{Uri.EscapeDataString(fileName)}\"";
+                }
+                
+                // Check if this is a range request (for video streaming)
+                var rangeHeader = Request.Headers["Range"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(rangeHeader) && (contentType.StartsWith("video/") || contentType.StartsWith("audio/")))
+                {
+                    return HandleRangeRequest(fileStream, contentType, fileName, rangeHeader);
+                }
+                
+                return File(fileStream, contentType, fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to stream media file: {ObjectName}", objectName);
                 return StatusCode(500, new { error = "Internal server error", message = ex.Message });
             }
         }
@@ -983,6 +1117,107 @@ namespace coptic_app_backend.Api.Controllers
                 throw new ArgumentOutOfRangeException(nameof(offset));
 
             _position = newPosition;
+            return _position;
+        }
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    /// <summary>
+    /// Buffered partial stream optimized for mobile streaming
+    /// </summary>
+    public class BufferedPartialStream : Stream
+    {
+        private readonly Stream _baseStream;
+        private readonly long _start;
+        private readonly long _length;
+        private long _position;
+        private readonly byte[] _buffer;
+        private int _bufferPosition;
+        private int _bufferLength;
+        private const int BufferSize = 64 * 1024; // 64KB buffer for mobile
+
+        public BufferedPartialStream(Stream baseStream, long start, long length)
+        {
+            _baseStream = baseStream;
+            _start = start;
+            _length = length;
+            _position = 0;
+            _buffer = new byte[BufferSize];
+            _bufferPosition = 0;
+            _bufferLength = 0;
+        }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => true;
+        public override bool CanWrite => false;
+        public override long Length => _length;
+        public override long Position
+        {
+            get => _position;
+            set => Seek(value, SeekOrigin.Begin);
+        }
+
+        public override void Flush() => _baseStream.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (_position >= _length)
+                return 0;
+
+            var remaining = _length - _position;
+            var bytesToRead = (int)Math.Min(count, remaining);
+            var totalBytesRead = 0;
+
+            while (bytesToRead > 0)
+            {
+                // Refill buffer if needed
+                if (_bufferPosition >= _bufferLength)
+                {
+                    var bufferStart = _start + _position;
+                    var bufferSize = (int)Math.Min(BufferSize, _length - _position);
+                    
+                    if (bufferSize <= 0)
+                        break;
+
+                    _baseStream.Position = bufferStart;
+                    _bufferLength = _baseStream.Read(_buffer, 0, bufferSize);
+                    _bufferPosition = 0;
+
+                    if (_bufferLength == 0)
+                        break;
+                }
+
+                // Copy from buffer
+                var bytesFromBuffer = Math.Min(bytesToRead, _bufferLength - _bufferPosition);
+                Array.Copy(_buffer, _bufferPosition, buffer, offset + totalBytesRead, bytesFromBuffer);
+                
+                _bufferPosition += bytesFromBuffer;
+                _position += bytesFromBuffer;
+                totalBytesRead += bytesFromBuffer;
+                bytesToRead -= bytesFromBuffer;
+            }
+
+            return totalBytesRead;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            long newPosition = origin switch
+            {
+                SeekOrigin.Begin => offset,
+                SeekOrigin.Current => _position + offset,
+                SeekOrigin.End => _length + offset,
+                _ => throw new ArgumentException("Invalid seek origin")
+            };
+
+            if (newPosition < 0 || newPosition > _length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            _position = newPosition;
+            _bufferPosition = 0; // Reset buffer position
+            _bufferLength = 0;   // Invalidate buffer
             return _position;
         }
 
