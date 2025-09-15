@@ -195,7 +195,46 @@ namespace coptic_app_backend.Api.Controllers
                 }
 
                 var fileStream = await _fileStorageService.DownloadFileAsync(fileName);
-                return File(fileStream, "application/octet-stream", fileName);
+                
+                // Determine content type based on file extension
+                var extension = Path.GetExtension(fileName).ToLowerInvariant();
+                var contentType = extension switch
+                {
+                    ".mp4" => "video/mp4",
+                    ".avi" => "video/x-msvideo",
+                    ".mov" => "video/quicktime",
+                    ".wmv" => "video/x-ms-wmv",
+                    ".flv" => "video/x-flv",
+                    ".webm" => "video/webm",
+                    ".mkv" => "video/x-matroska",
+                    ".mp3" => "audio/mpeg",
+                    ".wav" => "audio/wav",
+                    ".ogg" => "audio/ogg",
+                    ".m4a" => "audio/mp4",
+                    ".aac" => "audio/aac",
+                    ".flac" => "audio/flac",
+                    ".pdf" => "application/pdf",
+                    ".txt" => "text/plain",
+                    ".doc" => "application/msword",
+                    ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    ".xls" => "application/vnd.ms-excel",
+                    ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    ".ppt" => "application/vnd.ms-powerpoint",
+                    ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    ".jpg" or ".jpeg" => "image/jpeg",
+                    ".png" => "image/png",
+                    ".gif" => "image/gif",
+                    ".bmp" => "image/bmp",
+                    ".webp" => "image/webp",
+                    _ => "application/octet-stream"
+                };
+                
+                // Add headers for proper mobile download support
+                Response.Headers["Content-Disposition"] = $"attachment; filename=\"{Uri.EscapeDataString(fileName)}\"";
+                Response.Headers["Content-Length"] = fileStream.Length.ToString();
+                Response.Headers["Cache-Control"] = "public, max-age=3600";
+                
+                return File(fileStream, contentType, fileName);
             }
             catch (Exception ex)
             {

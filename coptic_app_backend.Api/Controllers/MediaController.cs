@@ -148,8 +148,8 @@ namespace coptic_app_backend.Api.Controllers
                 }
 
                 Response.StatusCode = 206; // Partial Content
-                Response.Headers.Add("Content-Range", $"bytes {range.Value.Start}-{range.Value.End}/{fileLength}");
-                Response.Headers.Add("Content-Length", (range.Value.End - range.Value.Start + 1).ToString());
+                Response.Headers["Content-Range"] = $"bytes {range.Value.Start}-{range.Value.End}/{fileLength}";
+                Response.Headers["Content-Length"] = (range.Value.End - range.Value.Start + 1).ToString();
 
                 // Create a partial stream
                 var partialStream = new PartialStream(fileStream, range.Value.Start, range.Value.End - range.Value.Start + 1);
@@ -427,13 +427,13 @@ namespace coptic_app_backend.Api.Controllers
             {
                 _logger.LogInformation("Testing MinIO connectivity");
                 
-                // Try to list objects in the bucket
-                var objects = await _mediaService.ListObjectsAsync();
+                // Try to get a test file URL to verify connectivity
+                var testUrl = await _mediaService.GetFileUrlAsync("test-connection");
                 
                 return Ok(new { 
                     status = "MinIO is accessible", 
-                    objectCount = objects.Count,
-                    message = "MinIO connection successful"
+                    message = "MinIO connection successful",
+                    testUrl = testUrl
                 });
             }
             catch (Exception ex)
@@ -566,8 +566,12 @@ namespace coptic_app_backend.Api.Controllers
                 string contentType = GetContentType(fileName);
                 
                 // Enable range requests for video streaming
-                Response.Headers.Add("Accept-Ranges", "bytes");
-                Response.Headers.Add("Cache-Control", "public, max-age=3600");
+                Response.Headers["Accept-Ranges"] = "bytes";
+                Response.Headers["Cache-Control"] = "public, max-age=3600";
+                
+                // Add headers for proper mobile download support
+                Response.Headers["Content-Disposition"] = $"attachment; filename=\"{Uri.EscapeDataString(fileName)}\"";
+                Response.Headers["Content-Length"] = fileStream.Length.ToString();
                 
                 // Check if this is a range request (for video streaming)
                 var rangeHeader = Request.Headers["Range"].FirstOrDefault();
