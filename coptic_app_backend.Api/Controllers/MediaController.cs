@@ -798,6 +798,7 @@ namespace coptic_app_backend.Api.Controllers
 
                 // First try to find the file in the database to determine storage type
                 var mediaFile = await _mediaFileRepository.GetMediaFileByObjectNameAsync(decodedObjectName);
+                _logger.LogInformation("Database lookup for object '{ObjectName}' returned: {Found}", decodedObjectName, mediaFile != null ? "Found" : "Not Found");
                 
                 if (mediaFile != null)
                 {
@@ -839,35 +840,56 @@ namespace coptic_app_backend.Api.Controllers
                 }
                 else
                 {
-                    _logger.LogWarning("File not found in database, trying MinIO first: {ObjectName}", decodedObjectName);
+                    _logger.LogWarning("File not found in database, trying both storage systems: {ObjectName}", decodedObjectName);
                     
-                    // Fallback: try MinIO first, then local storage
+                    // Fallback: try both storage systems
                     bool deleted = false;
+                    Exception? minioEx = null;
+                    Exception? localEx = null;
+                    
+                    // Try MinIO first
                     try
                     {
                         await _mediaService.DeleteFileAsync(decodedObjectName);
                         _logger.LogInformation("Media file deleted successfully from MinIO: {ObjectName} by user {UserId}", decodedObjectName, currentUserId);
                         deleted = true;
                     }
-                    catch (Exception minioEx)
+                    catch (Exception ex)
                     {
-                        _logger.LogWarning(minioEx, "MinIO delete failed, trying local storage: {ObjectName}", decodedObjectName);
-                        try
-                        {
-                            await _fileStorageService.DeleteFileAsync(decodedObjectName);
-                            _logger.LogInformation("Media file deleted successfully from local storage: {ObjectName} by user {UserId}", decodedObjectName, currentUserId);
-                            deleted = true;
-                        }
-                        catch (Exception localEx)
-                        {
-                            _logger.LogError(localEx, "Both MinIO and local storage delete failed for: {ObjectName}", decodedObjectName);
-                            throw new Exception($"Failed to delete file from both MinIO and local storage. MinIO error: {minioEx.Message}, Local error: {localEx.Message}", localEx);
-                        }
+                        minioEx = ex;
+                        _logger.LogWarning(ex, "MinIO delete failed: {ObjectName}", decodedObjectName);
+                    }
+                    
+                    // Try local storage
+                    try
+                    {
+                        await _fileStorageService.DeleteFileAsync(decodedObjectName);
+                        _logger.LogInformation("Media file deleted successfully from local storage: {ObjectName} by user {UserId}", decodedObjectName, currentUserId);
+                        deleted = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        localEx = ex;
+                        _logger.LogWarning(ex, "Local storage delete failed: {ObjectName}", decodedObjectName);
                     }
                     
                     if (!deleted)
                     {
-                        throw new Exception("File deletion failed from both storage systems");
+                        var errorMessage = "File deletion failed from both storage systems";
+                        if (minioEx != null && localEx != null)
+                        {
+                            errorMessage += $". MinIO error: {minioEx.Message}, Local error: {localEx.Message}";
+                        }
+                        else if (minioEx != null)
+                        {
+                            errorMessage += $". MinIO error: {minioEx.Message}";
+                        }
+                        else if (localEx != null)
+                        {
+                            errorMessage += $". Local error: {localEx.Message}";
+                        }
+                        
+                        throw new Exception(errorMessage);
                     }
                 }
 

@@ -1,0 +1,37 @@
+### Test Media File Deletion with Abune Credentials
+### This script tests the media file deletion functionality on remote server
+
+### 1. Login with Abune credentials
+POST http://162.243.165.212:5000/api/Auth/login
+Content-Type: application/json
+
+{
+    "email": "abune@church.com",
+    "password": "abune123"
+}
+
+### 2. Get all media files to see what's available for deletion (Books)
+GET http://162.243.165.212:5000/api/Media/type/0
+Authorization: Bearer {{auth_token}}
+
+### 3. Get media files by type (Video)
+GET http://162.243.165.212:5000/api/Media/type/1
+Authorization: Bearer {{auth_token}}
+
+### 4. Get media files by type (Audio)
+GET http://162.243.165.212:5000/api/Media/type/2
+Authorization: Bearer {{auth_token}}
+
+### 5. Test MinIO connectivity
+GET http://162.243.165.212:5000/api/Media/test-minio
+
+### 6. Test deletion with a specific file (replace with actual object name)
+DELETE http://162.243.165.212:5000/api/Media/{{object_name}}
+Authorization: Bearer {{auth_token}}
+
+### Example deletion requests (uncomment and replace with actual object names):
+# DELETE http://162.243.165.212:5000/api/Media/media%2Ffolder123%2Fvideo%2Ftest_video_20241201_120000_abc12345.mp4
+# Authorization: Bearer {{auth_token}}
+
+# DELETE http://162.243.165.212:5000/api/Media/uploads%2Fgeneral%2F2024-12-01%2Ftest_file_20241201_120000_abc12345.txt
+# Authorization: Bearer {{auth_token}}
