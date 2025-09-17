@@ -284,10 +284,28 @@ namespace coptic_app_backend.Api.Controllers
                     return BadRequest(validationResult.ErrorMessage);
                 }
 
-                // Sanitize filename for object storage (but keep original for display)
-                var originalFileName = request.File.FileName;
-                var sanitizedFileName = SanitizeFilename(originalFileName);
-                _logger.LogInformation("Original filename: {Original}, Sanitized: {Sanitized}", originalFileName, sanitizedFileName);
+                // Validate custom filename if provided
+                if (!string.IsNullOrEmpty(request.FileName))
+                {
+                    var filenameValidation = ValidateCustomFileName(request.FileName);
+                    if (!filenameValidation.IsValid)
+                    {
+                        return BadRequest(filenameValidation.ErrorMessage);
+                    }
+                }
+
+                // Use custom filename from user if provided, otherwise use file's original name
+                var displayFileName = !string.IsNullOrEmpty(request.FileName) ? request.FileName : request.File.FileName;
+                var sanitizedFileName = SanitizeFilename(displayFileName);
+                
+                // Ensure the custom filename has the correct extension
+                var originalExtension = Path.GetExtension(request.File.FileName);
+                if (!string.IsNullOrEmpty(originalExtension) && !displayFileName.EndsWith(originalExtension, StringComparison.OrdinalIgnoreCase))
+                {
+                    displayFileName = $"{displayFileName}{originalExtension}";
+                    sanitizedFileName = SanitizeFilename(displayFileName);
+                }
+                _logger.LogInformation("Display filename: {Display}, Sanitized: {Sanitized}", displayFileName, sanitizedFileName);
 
                 // Upload the file - try MinIO first, fallback to local storage
                 using var stream = request.File.OpenReadStream();
@@ -312,8 +330,8 @@ namespace coptic_app_backend.Api.Controllers
                     // Save file record to database
                     var mediaFile = new MediaFile
                     {
-                        FileName = originalFileName, // Store original filename for display
-                        ObjectName = objectName,     // Store sanitized object name for storage
+                        FileName = displayFileName, // Store custom filename for display
+                        ObjectName = objectName,    // Store sanitized object name for storage
                         FileUrl = fileUrl,
                         FileSize = request.File.Length,
                         ContentType = request.File.ContentType,
@@ -347,8 +365,8 @@ namespace coptic_app_backend.Api.Controllers
                     // Save file record to database
                     var mediaFile = new MediaFile
                     {
-                        FileName = originalFileName, // Store original filename for display
-                        ObjectName = objectName,     // Store sanitized object name for storage
+                        FileName = displayFileName, // Store custom filename for display
+                        ObjectName = objectName,    // Store sanitized object name for storage
                         FileUrl = fileUrl,
                         FileSize = request.File.Length,
                         ContentType = request.File.ContentType,
@@ -367,7 +385,7 @@ namespace coptic_app_backend.Api.Controllers
                 var response = new MediaUploadResponse
                 {
                     ObjectName = objectName,
-                    FileName = request.File.FileName,
+                    FileName = displayFileName,
                     FileSize = request.File.Length,
                     FileType = request.File.ContentType,
                     MediaType = request.MediaType,
@@ -1049,6 +1067,53 @@ namespace coptic_app_backend.Api.Controllers
             return new FileValidationResult { IsValid = true };
         }
 
+        private FileValidationResult ValidateCustomFileName(string fileName)
+        {
+            // Check if filename is empty or too long
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return new FileValidationResult 
+                { 
+                    IsValid = false, 
+                    ErrorMessage = "Filename cannot be empty" 
+                };
+            }
+
+            if (fileName.Length > 255)
+            {
+                return new FileValidationResult 
+                { 
+                    IsValid = false, 
+                    ErrorMessage = "Filename cannot exceed 255 characters" 
+                };
+            }
+
+            // Check for invalid characters
+            var invalidChars = Path.GetInvalidFileNameChars();
+            if (fileName.IndexOfAny(invalidChars) >= 0)
+            {
+                return new FileValidationResult 
+                { 
+                    IsValid = false, 
+                    ErrorMessage = "Filename contains invalid characters. Please avoid: " + string.Join(", ", invalidChars.Where(c => !char.IsControl(c))) 
+                };
+            }
+
+            // Check for reserved names (Windows)
+            var reservedNames = new[] { "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9" };
+            var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName).ToUpperInvariant();
+            if (reservedNames.Contains(nameWithoutExtension))
+            {
+                return new FileValidationResult 
+                { 
+                    IsValid = false, 
+                    ErrorMessage = "Filename cannot be a reserved system name" 
+                };
+            }
+
+            return new FileValidationResult { IsValid = true };
+        }
+
         #endregion
 
         #region Private Helper Methods
@@ -1087,6 +1152,7 @@ namespace coptic_app_backend.Api.Controllers
         public string FolderId { get; set; } = string.Empty;
         public MediaType MediaType { get; set; }
         public string? Description { get; set; }
+        public string? FileName { get; set; } // Custom filename provided by user
     }
 
     public class MediaUploadResponse

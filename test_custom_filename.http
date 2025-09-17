@@ -1,0 +1,91 @@
+### Test Custom Filename Upload Functionality
+### This script tests the new custom filename feature
+
+### 1. Login with Abune credentials
+POST http://162.243.165.212:5000/api/Auth/login
+Content-Type: application/json
+
+{
+    "email": "abune@church.com",
+    "password": "abune123"
+}
+
+### 2. Test upload with custom filename (replace with actual folder ID)
+POST http://162.243.165.212:5000/api/Media/upload
+Authorization: Bearer {{auth_token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="File"; filename="original_document.pdf"
+Content-Type: application/pdf
+
+< ./test_document.txt
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="FolderId"
+
+91580834-7405-4e75-8ba0-5b01def2cc50
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="MediaType"
+
+0
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="Description"
+
+Test document with custom filename
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="FileName"
+
+My Custom Document Name
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 3. Test upload without custom filename (should use original filename)
+POST http://162.243.165.212:5000/api/Media/upload
+Authorization: Bearer {{auth_token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="File"; filename="another_document.pdf"
+Content-Type: application/pdf
+
+< ./test_document.txt
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="FolderId"
+
+91580834-7405-4e75-8ba0-5b01def2cc50
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="MediaType"
+
+0
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="Description"
+
+Test document without custom filename
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 4. Test invalid filename (should return error)
+POST http://162.243.165.212:5000/api/Media/upload
+Authorization: Bearer {{auth_token}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="File"; filename="valid_document.pdf"
+Content-Type: application/pdf
+
+< ./test_document.txt
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="FolderId"
+
+91580834-7405-4e75-8ba0-5b01def2cc50
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="MediaType"
+
+0
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="FileName"
+
+CON
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 5. Get uploaded files to verify custom filename was used
+GET http://162.243.165.212:5000/api/Media/folder/91580834-7405-4e75-8ba0-5b01def2cc50
+Authorization: Bearer {{auth_token}}
