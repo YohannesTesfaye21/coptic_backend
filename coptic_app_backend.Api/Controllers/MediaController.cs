@@ -806,17 +806,44 @@ namespace coptic_app_backend.Api.Controllers
                     
                     try
                     {
+                        bool deleted = false;
                         if (mediaFile.StorageType == "MinIO")
                         {
-                            // Delete from MinIO
-                            await _mediaService.DeleteFileAsync(decodedObjectName);
-                            _logger.LogInformation("Successfully deleted from MinIO: {ObjectName}", decodedObjectName);
+                            // Try MinIO first
+                            try
+                            {
+                                await _mediaService.DeleteFileAsync(decodedObjectName);
+                                _logger.LogInformation("Successfully deleted from MinIO: {ObjectName}", decodedObjectName);
+                                deleted = true;
+                            }
+                            catch (Exception minioEx)
+                            {
+                                _logger.LogWarning(minioEx, "MinIO deletion failed for {ObjectName}, trying local storage", decodedObjectName);
+                                // Fallback to local storage if MinIO fails
+                                try
+                                {
+                                    await _fileStorageService.DeleteFileAsync(decodedObjectName);
+                                    _logger.LogInformation("Successfully deleted from local storage (fallback): {ObjectName}", decodedObjectName);
+                                    deleted = true;
+                                }
+                                catch (Exception localEx)
+                                {
+                                    _logger.LogError(localEx, "Both MinIO and local storage deletion failed for {ObjectName}", decodedObjectName);
+                                    throw new Exception($"Failed to delete file from both MinIO and local storage. MinIO error: {minioEx.Message}, Local error: {localEx.Message}", localEx);
+                                }
+                            }
                         }
                         else
                         {
                             // Delete from local storage
                             await _fileStorageService.DeleteFileAsync(decodedObjectName);
                             _logger.LogInformation("Successfully deleted from local storage: {ObjectName}", decodedObjectName);
+                            deleted = true;
+                        }
+                        
+                        if (!deleted)
+                        {
+                            throw new Exception("File deletion failed from both storage systems");
                         }
                         
                         // Delete from database
