@@ -9,11 +9,13 @@ namespace coptic_app_backend.Application.Services
     public class FolderService : IFolderService
     {
         private readonly IFolderRepository _folderRepository;
+        private readonly IMediaFileRepository _mediaFileRepository;
         private readonly ILogger<FolderService> _logger;
 
-        public FolderService(IFolderRepository folderRepository, ILogger<FolderService> logger)
+        public FolderService(IFolderRepository folderRepository, IMediaFileRepository mediaFileRepository, ILogger<FolderService> logger)
         {
             _folderRepository = folderRepository;
+            _mediaFileRepository = mediaFileRepository;
             _logger = logger;
         }
 
@@ -172,7 +174,14 @@ namespace coptic_app_backend.Application.Services
                     return false;
                 }
 
-                return await _folderRepository.DeleteFolderAsync(folderId);
+                // First delete all media files in the folder
+                var mediaFilesDeleted = await _mediaFileRepository.DeleteAllMediaFilesInFolderAsync(folderId);
+                _logger.LogInformation("Deleted media files in folder: {FolderId}, Success: {Success}", folderId, mediaFilesDeleted);
+
+                // Then delete the folder
+                var folderDeleted = await _folderRepository.DeleteFolderAsync(folderId);
+                
+                return folderDeleted;
             }
             catch (Exception ex)
             {
@@ -191,7 +200,14 @@ namespace coptic_app_backend.Application.Services
                     return false;
                 }
 
-                return await _folderRepository.PermanentlyDeleteFolderAsync(folderId);
+                // First permanently delete all media files in the folder
+                var mediaFilesDeleted = await _mediaFileRepository.PermanentlyDeleteAllMediaFilesInFolderAsync(folderId);
+                _logger.LogInformation("Permanently deleted media files in folder: {FolderId}, Success: {Success}", folderId, mediaFilesDeleted);
+
+                // Then permanently delete the folder
+                var folderDeleted = await _folderRepository.PermanentlyDeleteFolderAsync(folderId);
+                
+                return folderDeleted;
             }
             catch (Exception ex)
             {

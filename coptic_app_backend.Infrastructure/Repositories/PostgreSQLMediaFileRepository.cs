@@ -245,5 +245,62 @@ namespace coptic_app_backend.Infrastructure.Repositories
                 throw;
             }
         }
+
+        public async Task<bool> DeleteAllMediaFilesInFolderAsync(string folderId)
+        {
+            try
+            {
+                var mediaFiles = await _context.MediaFiles
+                    .Where(f => f.FolderId == folderId && f.IsActive)
+                    .ToListAsync();
+
+                if (mediaFiles.Count == 0)
+                {
+                    _logger.LogInformation("No media files found in folder: {FolderId}", folderId);
+                    return true;
+                }
+
+                foreach (var mediaFile in mediaFiles)
+                {
+                    mediaFile.IsActive = false;
+                    mediaFile.LastModified = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                }
+
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Soft deleted {Count} media files in folder: {FolderId}", mediaFiles.Count, folderId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error soft deleting media files in folder: {FolderId}", folderId);
+                throw;
+            }
+        }
+
+        public async Task<bool> PermanentlyDeleteAllMediaFilesInFolderAsync(string folderId)
+        {
+            try
+            {
+                var mediaFiles = await _context.MediaFiles
+                    .Where(f => f.FolderId == folderId)
+                    .ToListAsync();
+
+                if (mediaFiles.Count == 0)
+                {
+                    _logger.LogInformation("No media files found in folder: {FolderId}", folderId);
+                    return true;
+                }
+
+                _context.MediaFiles.RemoveRange(mediaFiles);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Permanently deleted {Count} media files in folder: {FolderId}", mediaFiles.Count, folderId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error permanently deleting media files in folder: {FolderId}", folderId);
+                throw;
+            }
+        }
     }
 }

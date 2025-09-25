@@ -65,5 +65,15 @@ namespace coptic_app_backend.Domain.Interfaces
         /// Get all media files across all folders and Abunes
         /// </summary>
         Task<List<MediaFile>> GetAllMediaFilesAsync();
+        
+        /// <summary>
+        /// Delete all media files in a folder
+        /// </summary>
+        Task<bool> DeleteAllMediaFilesInFolderAsync(string folderId);
+        
+        /// <summary>
+        /// Permanently delete all media files in a folder
+        /// </summary>
+        Task<bool> PermanentlyDeleteAllMediaFilesInFolderAsync(string folderId);
     }
 }

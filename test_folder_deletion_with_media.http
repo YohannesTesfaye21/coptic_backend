@@ -1,0 +1,35 @@
+### Test Folder Deletion with Media Files
+### This script tests that folder deletion properly deletes all media files within the folder
+
+### 1. Login with Abune credentials
+POST http://162.243.165.212:5000/api/Auth/login
+Content-Type: application/json
+
+{
+    "email": "abune@church.com",
+    "password": "abune123"
+}
+
+### 2. Get all folders to see what's available
+GET http://162.243.165.212:5000/api/Folder
+Authorization: Bearer {{auth_token}}
+
+### 3. Get media files in a specific folder (replace with actual folder ID)
+GET http://162.243.165.212:5000/api/Media/folder/91580834-7405-4e75-8ba0-5b01def2cc50
+Authorization: Bearer {{auth_token}}
+
+### 4. Test direct media file deletion by folder (new endpoint)
+DELETE http://162.243.165.212:5000/api/Media/folder/91580834-7405-4e75-8ba0-5b01def2cc50/all
+Authorization: Bearer {{auth_token}}
+
+### 5. Test folder deletion (should now delete media files automatically)
+DELETE http://162.243.165.212:5000/api/Folder/91580834-7405-4e75-8ba0-5b01def2cc50
+Authorization: Bearer {{auth_token}}
+
+### 6. Test permanent folder deletion (should permanently delete media files)
+DELETE http://162.243.165.212:5000/api/Folder/91580834-7405-4e75-8ba0-5b01def2cc50/permanent
+Authorization: Bearer {{auth_token}}
+
+### 7. Verify media files are deleted (should return empty or 404)
+GET http://162.243.165.212:5000/api/Media/folder/91580834-7405-4e75-8ba0-5b01def2cc50
+Authorization: Bearer {{auth_token}}

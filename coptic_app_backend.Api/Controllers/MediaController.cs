@@ -17,6 +17,7 @@ namespace coptic_app_backend.Api.Controllers
         private readonly IFileStorageService _fileStorageService;
         private readonly IFolderService _folderService;
         private readonly IMediaFileRepository _mediaFileRepository;
+        private readonly IVideoCompressionService _videoCompressionService;
         private readonly ILogger<MediaController> _logger;
 
         public MediaController(
@@ -24,12 +25,14 @@ namespace coptic_app_backend.Api.Controllers
             IFileStorageService fileStorageService,
             IFolderService folderService,
             IMediaFileRepository mediaFileRepository,
+            IVideoCompressionService videoCompressionService,
             ILogger<MediaController> logger)
         {
             _mediaService = mediaService;
             _fileStorageService = fileStorageService;
             _folderService = folderService;
             _mediaFileRepository = mediaFileRepository;
+            _videoCompressionService = videoCompressionService;
             _logger = logger;
         }
 
@@ -308,20 +311,69 @@ namespace coptic_app_backend.Api.Controllers
                 _logger.LogInformation("Display filename: {Display}, Sanitized: {Sanitized}", displayFileName, sanitizedFileName);
 
                 // Upload the file - try MinIO first, fallback to local storage
-                using var stream = request.File.OpenReadStream();
+                using var originalStream = request.File.OpenReadStream();
                 string objectName;
                 string fileUrl;
+                long finalFileSize = request.File.Length;
+                string finalContentType = request.File.ContentType;
 
                 try
                 {
                     _logger.LogInformation("Attempting to upload to MinIO...");
+                    
+                    // Check if this is a video file that needs compression
+                    Stream uploadStream = originalStream;
+                    string uploadFileName = sanitizedFileName;
+                    
+                    if (request.MediaType == MediaType.Video)
+                    {
+                        _logger.LogInformation("Video file detected, checking if compression is needed...");
+                        
+                        // Check if compression is needed
+                        var needsCompression = await _videoCompressionService.IsVideoCompressionNeededAsync(
+                            originalStream, 
+                            request.File.Length, 
+                            VideoQuality.Mobile
+                        );
+                        
+                        if (needsCompression)
+                        {
+                            _logger.LogInformation("Video compression needed, starting compression...");
+                            originalStream.Position = 0; // Reset stream position
+                            
+                            uploadStream = await _videoCompressionService.CompressVideoAsync(
+                                originalStream, 
+                                sanitizedFileName, 
+                                VideoQuality.Mobile
+                            );
+                            
+                            // Update filename to indicate it's compressed
+                            uploadFileName = Path.GetFileNameWithoutExtension(sanitizedFileName) + "_compressed.mp4";
+                            finalContentType = "video/mp4";
+                            finalFileSize = uploadStream.Length;
+                            
+                            _logger.LogInformation("Video compressed successfully. Original size: {OriginalSize}MB, Compressed size: {CompressedSize}MB", 
+                                request.File.Length / (1024 * 1024), finalFileSize / (1024 * 1024));
+                        }
+                        else
+                        {
+                            _logger.LogInformation("Video compression not needed, using original file");
+                        }
+                    }
+                    
                     objectName = await _mediaService.UploadMediaFileAsync(
-                        stream,
-                        sanitizedFileName,
-                        request.File.ContentType,
+                        uploadStream,
+                        uploadFileName,
+                        finalContentType,
                         request.FolderId,
                         request.MediaType
                     );
+                    
+                    // Dispose compressed stream if it was created
+                    if (uploadStream != originalStream)
+                    {
+                        uploadStream.Dispose();
+                    }
 
                     // Generate download URL instead of presigned URL
                     fileUrl = $"{Request.Scheme}://{Request.Host}/api/Media/download/{Uri.EscapeDataString(objectName)}";
@@ -333,14 +385,14 @@ namespace coptic_app_backend.Api.Controllers
                         FileName = displayFileName, // Store custom filename for display
                         ObjectName = objectName,    // Store sanitized object name for storage
                         FileUrl = fileUrl,
-                        FileSize = request.File.Length,
-                        ContentType = request.File.ContentType,
+                        FileSize = finalFileSize,   // Use final file size (may be compressed)
+                        ContentType = finalContentType, // Use final content type
                         MediaType = request.MediaType,
                         FolderId = request.FolderId,
                         UploadedBy = currentUserId,
                         AbuneId = currentUserAbuneId,
                         Description = request.Description,
-                        StorageType = "MinIO"
+                        StorageType = "MinIO" // Successfully uploaded to MinIO
                     };
                     
                     await _mediaFileRepository.CreateMediaFileAsync(mediaFile);
@@ -350,13 +402,46 @@ namespace coptic_app_backend.Api.Controllers
                 {
                     _logger.LogWarning(minioEx, "MinIO upload failed, falling back to local storage: {ErrorMessage}", minioEx.Message);
                     
-                    // Fallback to local storage
-                    stream.Position = 0; // Reset stream position
+                    // Fallback to local storage - use the same compression logic
+                    originalStream.Position = 0; // Reset stream position
+                    
+                    // Re-apply compression logic for local storage fallback
+                    Stream fallbackStream = originalStream;
+                    string fallbackFileName = sanitizedFileName;
+                    
+                    if (request.MediaType == MediaType.Video)
+                    {
+                        var needsCompression = await _videoCompressionService.IsVideoCompressionNeededAsync(
+                            originalStream, 
+                            request.File.Length, 
+                            VideoQuality.Mobile
+                        );
+                        
+                        if (needsCompression)
+                        {
+                            originalStream.Position = 0;
+                            fallbackStream = await _videoCompressionService.CompressVideoAsync(
+                                originalStream, 
+                                sanitizedFileName, 
+                                VideoQuality.Mobile
+                            );
+                            fallbackFileName = Path.GetFileNameWithoutExtension(sanitizedFileName) + "_compressed.mp4";
+                            finalContentType = "video/mp4";
+                            finalFileSize = fallbackStream.Length;
+                        }
+                    }
+                    
                     objectName = await _fileStorageService.UploadFileAsync(
-                        stream,
-                        sanitizedFileName,
-                        request.File.ContentType
+                        fallbackStream,
+                        fallbackFileName,
+                        finalContentType
                     );
+                    
+                    // Dispose compressed stream if it was created
+                    if (fallbackStream != originalStream)
+                    {
+                        fallbackStream.Dispose();
+                    }
                     
                     // For local storage fallback, generate MinIO-style URL
                     fileUrl = $"http://162.243.165.212:9000/coptic-files/{Uri.EscapeDataString(objectName)}";
@@ -368,8 +453,8 @@ namespace coptic_app_backend.Api.Controllers
                         FileName = displayFileName, // Store custom filename for display
                         ObjectName = objectName,    // Store sanitized object name for storage
                         FileUrl = fileUrl,
-                        FileSize = request.File.Length,
-                        ContentType = request.File.ContentType,
+                        FileSize = finalFileSize,   // Use final file size (may be compressed)
+                        ContentType = finalContentType, // Use final content type
                         MediaType = request.MediaType,
                         FolderId = request.FolderId,
                         UploadedBy = currentUserId,
@@ -386,8 +471,8 @@ namespace coptic_app_backend.Api.Controllers
                 {
                     ObjectName = objectName,
                     FileName = displayFileName,
-                    FileSize = request.File.Length,
-                    FileType = request.File.ContentType,
+                    FileSize = finalFileSize, // Use final file size (may be compressed)
+                    FileType = finalContentType, // Use final content type
                     MediaType = request.MediaType,
                     FolderId = request.FolderId,
                     FileUrl = fileUrl,
@@ -526,13 +611,176 @@ namespace coptic_app_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Stream a media file with mobile optimization
+        /// Stream a media file with mobile optimization and video compression support
         /// </summary>
         /// <param name="objectName">MinIO object name</param>
+        /// <param name="quality">Video quality for streaming (default: Mobile)</param>
         /// <returns>File stream</returns>
         [HttpGet("stream/{objectName}")]
         [AllowAnonymous]
-        public async Task<IActionResult> StreamMediaFile(string objectName)
+        public async Task<IActionResult> StreamMediaFile(string objectName, [FromQuery] VideoQuality quality = VideoQuality.Mobile)
+        {
+            return await StreamMediaFileInternal(objectName, quality);
+        }
+
+        /// <summary>
+        /// Stream a video file directly from MinIO (for testing)
+        /// </summary>
+        /// <param name="objectName">MinIO object name</param>
+        /// <returns>File stream</returns>
+        [HttpGet("stream-direct/{objectName}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> StreamDirectFromMinIO(string objectName)
+        {
+            try
+            {
+                var decodedObjectName = Uri.UnescapeDataString(objectName);
+                _logger.LogInformation("Direct MinIO stream request for object: {ObjectName}", decodedObjectName);
+
+                // Try to download directly from MinIO
+                var fileStream = await _mediaService.DownloadFileAsync(decodedObjectName);
+                var fileName = Path.GetFileName(decodedObjectName);
+                var contentType = GetContentType(fileName);
+                
+                // Set up streaming headers
+                Response.Headers["Accept-Ranges"] = "bytes";
+                Response.Headers["Cache-Control"] = "public, max-age=86400";
+                Response.Headers["Content-Disposition"] = "inline";
+                
+                // Check for range requests
+                var rangeHeader = Request.Headers["Range"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(rangeHeader))
+                {
+                    return HandleRangeRequest(fileStream, contentType, fileName, rangeHeader);
+                }
+                
+                return File(fileStream, contentType, fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to stream directly from MinIO: {ObjectName}", objectName);
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Stream a video file with mobile optimization - creates compressed version on demand if needed
+        /// </summary>
+        /// <param name="objectName">MinIO object name</param>
+        /// <param name="quality">Video quality for streaming (default: Mobile)</param>
+        /// <returns>File stream</returns>
+        [HttpGet("stream-mobile/{objectName}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> StreamMobileOptimizedVideo(string objectName, [FromQuery] VideoQuality quality = VideoQuality.Mobile)
+        {
+            try
+            {
+                // URL decode the object name
+                var decodedObjectName = Uri.UnescapeDataString(objectName);
+                _logger.LogInformation("Mobile-optimized stream request for object: {ObjectName} with quality {Quality}", decodedObjectName, quality);
+
+                // First try to find the file in the database
+                var mediaFiles = await _mediaFileRepository.GetAllMediaFilesAsync();
+                var mediaFile = mediaFiles.FirstOrDefault(f => f.ObjectName == decodedObjectName);
+                
+                if (mediaFile == null)
+                {
+                    _logger.LogWarning("File not found in database: {ObjectName}", decodedObjectName);
+                    return NotFound("File not found");
+                }
+
+                // Check if this is a video file
+                if (mediaFile.MediaType != MediaType.Video)
+                {
+                    _logger.LogInformation("File is not a video, using regular streaming: {ObjectName}", decodedObjectName);
+                    return await StreamMediaFileInternal(objectName, quality);
+                }
+
+                // For video files, check if we need to create a mobile-optimized version
+                var needsCompression = await _videoCompressionService.IsVideoCompressionNeededAsync(
+                    Stream.Null, // We'll get the actual stream below
+                    mediaFile.FileSize, 
+                    quality
+                );
+
+                string fileName = Path.GetFileName(decodedObjectName);
+
+                if (needsCompression && !decodedObjectName.Contains("_compressed"))
+                {
+                    _logger.LogInformation("Creating mobile-optimized version for: {ObjectName}", decodedObjectName);
+                    
+                    // Download original video - try MinIO first, then fallback to local
+                    Stream? fileStream = null;
+                    Exception? downloadError = null;
+                    
+                    // Try MinIO first (most common case)
+                    try
+                    {
+                        fileStream = await _mediaService.DownloadFileAsync(decodedObjectName);
+                        _logger.LogInformation("Successfully downloaded from MinIO: {ObjectName}", decodedObjectName);
+                    }
+                    catch (Exception minioEx)
+                    {
+                        _logger.LogWarning(minioEx, "MinIO download failed, trying local storage: {ObjectName}", decodedObjectName);
+                        downloadError = minioEx;
+                        
+                        // Fallback to local storage
+                        try
+                        {
+                            fileStream = await _fileStorageService.DownloadFileAsync(decodedObjectName);
+                            _logger.LogInformation("Successfully downloaded from local storage: {ObjectName}", decodedObjectName);
+                        }
+                        catch (Exception localEx)
+                        {
+                            _logger.LogError(localEx, "Both MinIO and local storage download failed for: {ObjectName}", decodedObjectName);
+                            throw new Exception($"Failed to download file from both MinIO and local storage. MinIO error: {minioEx.Message}, Local error: {localEx.Message}", localEx);
+                        }
+                    }
+
+                    // Compress for mobile
+                    var compressedStream = await _videoCompressionService.CompressVideoAsync(
+                        fileStream, 
+                        fileName, 
+                        quality
+                    );
+
+                    // Update filename for compressed version
+                    fileName = Path.GetFileNameWithoutExtension(fileName) + "_mobile.mp4";
+                    
+                    _logger.LogInformation("Created mobile-optimized version: {FileName}", fileName);
+                    
+                    // Set up streaming headers for mobile
+                    var contentType = "video/mp4";
+                    Response.Headers["Accept-Ranges"] = "bytes";
+                    Response.Headers["Cache-Control"] = "public, max-age=86400";
+                    Response.Headers["Content-Disposition"] = "inline";
+                    
+                    // Check for range requests
+                    var rangeHeader = Request.Headers["Range"].FirstOrDefault();
+                    if (!string.IsNullOrEmpty(rangeHeader))
+                    {
+                        return HandleRangeRequest(compressedStream, contentType, fileName, rangeHeader);
+                    }
+                    
+                    return File(compressedStream, contentType, fileName);
+                }
+                else
+                {
+                    _logger.LogInformation("Using existing file for streaming: {ObjectName}", decodedObjectName);
+                    return await StreamMediaFileInternal(objectName, quality);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to stream mobile-optimized video: {ObjectName}", objectName);
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Internal method for streaming media files
+        /// </summary>
+        private async Task<IActionResult> StreamMediaFileInternal(string objectName, VideoQuality quality = VideoQuality.Mobile)
         {
             try
             {
@@ -742,6 +990,113 @@ namespace coptic_app_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Compress a video from MinIO URL and stream it
+        /// </summary>
+        /// <param name="objectName">MinIO object name</param>
+        /// <param name="quality">Video quality for compression (default: Mobile)</param>
+        /// <returns>Compressed video stream</returns>
+        [HttpGet("compress-stream/{objectName}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CompressAndStreamVideo(string objectName, [FromQuery] VideoQuality quality = VideoQuality.Mobile)
+        {
+            try
+            {
+                var decodedObjectName = Uri.UnescapeDataString(objectName);
+                _logger.LogInformation("Compress and stream request for object: {ObjectName} with quality {Quality}", decodedObjectName, quality);
+
+                // Generate MinIO URL - use direct object name without double encoding
+                var minioUrl = $"http://162.243.165.212:9000/coptic-files/{decodedObjectName}";
+                _logger.LogInformation("Generated MinIO URL: {MinioUrl}", minioUrl);
+
+                // Get file info from database
+                var mediaFiles = await _mediaFileRepository.GetAllMediaFilesAsync();
+                var mediaFile = mediaFiles.FirstOrDefault(f => f.ObjectName == decodedObjectName);
+                
+                if (mediaFile == null)
+                {
+                    _logger.LogWarning("File not found in database: {ObjectName}", decodedObjectName);
+                    return NotFound("File not found");
+                }
+
+                // Check if compression is needed
+                var needsCompression = await _videoCompressionService.IsVideoCompressionNeededAsync(
+                    Stream.Null,
+                    mediaFile.FileSize,
+                    quality
+                );
+
+                if (!needsCompression)
+                {
+                    _logger.LogInformation("Compression not needed, redirecting to MinIO URL");
+                    return Redirect(minioUrl);
+                }
+
+                _logger.LogInformation("Starting video compression from MinIO URL...");
+                
+                // Compress video from MinIO URL
+                var compressedStream = await _videoCompressionService.CompressVideoFromUrlAsync(
+                    minioUrl,
+                    mediaFile.FileName,
+                    quality
+                );
+
+                var fileName = Path.GetFileNameWithoutExtension(mediaFile.FileName) + "_compressed.mp4";
+                var contentType = "video/mp4";
+                
+                _logger.LogInformation("Video compression completed, streaming compressed video: {FileName}", fileName);
+                
+                // Set up streaming headers
+                Response.Headers["Accept-Ranges"] = "bytes";
+                Response.Headers["Cache-Control"] = "public, max-age=86400";
+                Response.Headers["Content-Disposition"] = "inline";
+                
+                // Check for range requests
+                var rangeHeader = Request.Headers["Range"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(rangeHeader))
+                {
+                    return HandleRangeRequest(compressedStream, contentType, fileName, rangeHeader);
+                }
+                
+                return File(compressedStream, contentType, fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to compress and stream video: {ObjectName}", objectName);
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get MinIO URL for a media file (for direct access)
+        /// </summary>
+        /// <param name="objectName">MinIO object name</param>
+        /// <returns>MinIO URL</returns>
+        [HttpGet("minio-url/{objectName}")]
+        [AllowAnonymous]
+        public async Task<ActionResult<string>> GetMinIOUrl(string objectName)
+        {
+            try
+            {
+                var decodedObjectName = Uri.UnescapeDataString(objectName);
+                _logger.LogInformation("Getting MinIO URL for object: {ObjectName}", decodedObjectName);
+
+                // Generate MinIO URL directly
+                var minioUrl = $"http://162.243.165.212:9000/coptic-files/{Uri.EscapeDataString(decodedObjectName)}";
+                
+                return Ok(new { 
+                    url = minioUrl,
+                    objectName = decodedObjectName,
+                    message = "Direct MinIO URL generated"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get MinIO URL for: {ObjectName}", objectName);
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Get a download URL for a media file
         /// </summary>
         /// <param name="objectName">MinIO object name or filename</param>
@@ -943,6 +1298,80 @@ namespace coptic_app_backend.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to delete media file: {ObjectName}", objectName);
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Delete all media files in a folder from storage and database
+        /// </summary>
+        /// <param name="folderId">Folder ID</param>
+        /// <returns>Delete result</returns>
+        [HttpDelete("folder/{folderId}/all")]
+        [Authorize(Policy = "AbuneOnly")]
+        public async Task<ActionResult> DeleteAllMediaFilesInFolder(string folderId)
+        {
+            try
+            {
+                var currentUserId = User.FindFirst("UserId")?.Value;
+                if (string.IsNullOrEmpty(currentUserId))
+                {
+                    return BadRequest("User information not found in token");
+                }
+
+                _logger.LogInformation("Delete all media files request for folder: {FolderId} by user {UserId}", folderId, currentUserId);
+
+                // Get all media files in the folder
+                var mediaFiles = await _mediaFileRepository.GetMediaFilesByFolderIdAsync(folderId);
+                
+                if (mediaFiles.Count == 0)
+                {
+                    _logger.LogInformation("No media files found in folder: {FolderId}", folderId);
+                    return Ok(new { message = "No media files found in folder", deletedCount = 0 });
+                }
+
+                var deletedCount = 0;
+                var failedDeletions = new List<string>();
+
+                foreach (var mediaFile in mediaFiles)
+                {
+                    try
+                    {
+                        // Delete from storage
+                        if (mediaFile.StorageType == "MinIO")
+                        {
+                            await _mediaService.DeleteFileAsync(mediaFile.ObjectName);
+                        }
+                        else
+                        {
+                            await _fileStorageService.DeleteFileAsync(mediaFile.ObjectName);
+                        }
+
+                        // Delete from database
+                        await _mediaFileRepository.DeleteMediaFileAsync(mediaFile.Id);
+                        deletedCount++;
+                        
+                        _logger.LogInformation("Deleted media file: {ObjectName} from {StorageType}", mediaFile.ObjectName, mediaFile.StorageType);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to delete media file: {ObjectName}", mediaFile.ObjectName);
+                        failedDeletions.Add(mediaFile.ObjectName);
+                    }
+                }
+
+                var result = new { 
+                    message = $"Deleted {deletedCount} out of {mediaFiles.Count} media files", 
+                    deletedCount = deletedCount,
+                    totalCount = mediaFiles.Count,
+                    failedDeletions = failedDeletions
+                };
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete all media files in folder: {FolderId}", folderId);
                 return StatusCode(500, new { error = "Internal server error", message = ex.Message });
             }
         }
