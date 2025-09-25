@@ -342,6 +342,18 @@ builder.Services.AddHttpClient();
             builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
             builder.Services.AddScoped<MinIOFileStorageService>();
             builder.Services.AddScoped<IMediaStorageService, MinIOFileStorageService>();
+            
+            // Register VideoCompressionService conditionally - it may fail if FFmpeg is not available
+            try
+            {
+                builder.Services.AddScoped<IVideoCompressionService, VideoCompressionService>();
+                Console.WriteLine("[Service Registration] VideoCompressionService registered successfully");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Service Registration] Failed to register VideoCompressionService: {ex.Message}");
+                Console.WriteLine("[Service Registration] Video compression features will be disabled");
+            }
 
 // Configure application services
 builder.Services.AddScoped<IChatService, ChatService>();

@@ -17,7 +17,7 @@ namespace coptic_app_backend.Api.Controllers
         private readonly IFileStorageService _fileStorageService;
         private readonly IFolderService _folderService;
         private readonly IMediaFileRepository _mediaFileRepository;
-        private readonly IVideoCompressionService _videoCompressionService;
+        private readonly IVideoCompressionService? _videoCompressionService;
         private readonly ILogger<MediaController> _logger;
 
         public MediaController(
@@ -25,8 +25,8 @@ namespace coptic_app_backend.Api.Controllers
             IFileStorageService fileStorageService,
             IFolderService folderService,
             IMediaFileRepository mediaFileRepository,
-            IVideoCompressionService videoCompressionService,
-            ILogger<MediaController> logger)
+            ILogger<MediaController> logger,
+            IVideoCompressionService? videoCompressionService = null)
         {
             _mediaService = mediaService;
             _fileStorageService = fileStorageService;
@@ -325,7 +325,7 @@ namespace coptic_app_backend.Api.Controllers
                     Stream uploadStream = originalStream;
                     string uploadFileName = sanitizedFileName;
                     
-                    if (request.MediaType == MediaType.Video)
+                    if (request.MediaType == MediaType.Video && _videoCompressionService != null)
                     {
                         _logger.LogInformation("Video file detected, checking if compression is needed...");
                         
@@ -359,6 +359,10 @@ namespace coptic_app_backend.Api.Controllers
                         {
                             _logger.LogInformation("Video compression not needed, using original file");
                         }
+                    }
+                    else if (request.MediaType == MediaType.Video && _videoCompressionService == null)
+                    {
+                        _logger.LogWarning("Video compression service not available, using original file");
                     }
                     
                     objectName = await _mediaService.UploadMediaFileAsync(
@@ -409,7 +413,7 @@ namespace coptic_app_backend.Api.Controllers
                     Stream fallbackStream = originalStream;
                     string fallbackFileName = sanitizedFileName;
                     
-                    if (request.MediaType == MediaType.Video)
+                    if (request.MediaType == MediaType.Video && _videoCompressionService != null)
                     {
                         var needsCompression = await _videoCompressionService.IsVideoCompressionNeededAsync(
                             originalStream, 
@@ -697,11 +701,15 @@ namespace coptic_app_backend.Api.Controllers
                 }
 
                 // For video files, check if we need to create a mobile-optimized version
-                var needsCompression = await _videoCompressionService.IsVideoCompressionNeededAsync(
-                    Stream.Null, // We'll get the actual stream below
-                    mediaFile.FileSize, 
-                    quality
-                );
+                bool needsCompression = false;
+                if (_videoCompressionService != null)
+                {
+                    needsCompression = await _videoCompressionService.IsVideoCompressionNeededAsync(
+                        Stream.Null, // We'll get the actual stream below
+                        mediaFile.FileSize, 
+                        quality
+                    );
+                }
 
                 string fileName = Path.GetFileName(decodedObjectName);
 
@@ -738,11 +746,20 @@ namespace coptic_app_backend.Api.Controllers
                     }
 
                     // Compress for mobile
-                    var compressedStream = await _videoCompressionService.CompressVideoAsync(
-                        fileStream, 
-                        fileName, 
-                        quality
-                    );
+                    Stream? compressedStream = null;
+                    if (_videoCompressionService != null)
+                    {
+                        compressedStream = await _videoCompressionService.CompressVideoAsync(
+                            fileStream, 
+                            fileName, 
+                            quality
+                        );
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Video compression service not available, using original file");
+                        return await StreamMediaFileInternal(objectName, quality);
+                    }
 
                     // Update filename for compressed version
                     fileName = Path.GetFileNameWithoutExtension(fileName) + "_mobile.mp4";
@@ -1019,11 +1036,15 @@ namespace coptic_app_backend.Api.Controllers
                 }
 
                 // Check if compression is needed
-                var needsCompression = await _videoCompressionService.IsVideoCompressionNeededAsync(
-                    Stream.Null,
-                    mediaFile.FileSize,
-                    quality
-                );
+                bool needsCompression = false;
+                if (_videoCompressionService != null)
+                {
+                    needsCompression = await _videoCompressionService.IsVideoCompressionNeededAsync(
+                        Stream.Null,
+                        mediaFile.FileSize,
+                        quality
+                    );
+                }
 
                 if (!needsCompression)
                 {
@@ -1034,11 +1055,20 @@ namespace coptic_app_backend.Api.Controllers
                 _logger.LogInformation("Starting video compression from MinIO URL...");
                 
                 // Compress video from MinIO URL
-                var compressedStream = await _videoCompressionService.CompressVideoFromUrlAsync(
-                    minioUrl,
-                    mediaFile.FileName,
-                    quality
-                );
+                Stream? compressedStream = null;
+                if (_videoCompressionService != null)
+                {
+                    compressedStream = await _videoCompressionService.CompressVideoFromUrlAsync(
+                        minioUrl,
+                        mediaFile.FileName,
+                        quality
+                    );
+                }
+                else
+                {
+                    _logger.LogWarning("Video compression service not available, redirecting to original URL");
+                    return Redirect(minioUrl);
+                }
 
                 var fileName = Path.GetFileNameWithoutExtension(mediaFile.FileName) + "_compressed.mp4";
                 var contentType = "video/mp4";
