@@ -131,6 +131,122 @@ namespace coptic_app_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Paginated range request handler for large files
+        /// </summary>
+        /// <param name="fileStream">File stream</param>
+        /// <param name="contentType">Content type</param>
+        /// <param name="fileName">File name</param>
+        /// <param name="rangeHeader">Range header value</param>
+        /// <param name="chunkSize">Chunk size</param>
+        /// <returns>Partial content response</returns>
+        private IActionResult HandlePaginatedRangeRequest(Stream fileStream, string contentType, string fileName, string rangeHeader, int chunkSize)
+        {
+            try
+            {
+                var fileLength = fileStream.Length;
+                var range = ParseRangeHeader(rangeHeader, fileLength);
+                
+                if (range == null)
+                {
+                    return BadRequest("Invalid range header");
+                }
+
+                // Use provided chunk size for paginated streaming
+                var actualChunkSize = range.Value.End - range.Value.Start + 1;
+                
+                if (actualChunkSize > chunkSize)
+                {
+                    range = (range.Value.Start, range.Value.Start + chunkSize - 1);
+                    actualChunkSize = chunkSize;
+                }
+
+                Response.StatusCode = 206; // Partial Content
+                Response.Headers["Content-Range"] = $"bytes {range.Value.Start}-{range.Value.End}/{fileLength}";
+                Response.Headers["Content-Length"] = actualChunkSize.ToString();
+                
+                // Paginated streaming headers
+                Response.Headers["Accept-Ranges"] = "bytes";
+                Response.Headers["Cache-Control"] = "public, max-age=86400";
+                Response.Headers["Content-Disposition"] = "inline";
+                
+                // Add streaming-specific headers for mobile
+                if (contentType.StartsWith("video/"))
+                {
+                    Response.Headers["X-Content-Type-Options"] = "nosniff";
+                    Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+                }
+
+                // Create a partial stream for paginated streaming
+                var partialStream = new PartialStream(fileStream, range.Value.Start, actualChunkSize);
+                
+                return File(partialStream, contentType, fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling paginated range request: {RangeHeader}", rangeHeader);
+                return StatusCode(500, new { error = "Error handling range request", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Buffered range request handler for mobile devices
+        /// </summary>
+        /// <param name="fileStream">File stream</param>
+        /// <param name="contentType">Content type</param>
+        /// <param name="fileName">File name</param>
+        /// <param name="rangeHeader">Range header value</param>
+        /// <param name="bufferSize">Buffer size</param>
+        /// <returns>Partial content response</returns>
+        private IActionResult HandleBufferedRangeRequest(Stream fileStream, string contentType, string fileName, string rangeHeader, int bufferSize)
+        {
+            try
+            {
+                var fileLength = fileStream.Length;
+                var range = ParseRangeHeader(rangeHeader, fileLength);
+                
+                if (range == null)
+                {
+                    return BadRequest("Invalid range header");
+                }
+
+                // Use provided buffer size for buffered streaming
+                var actualChunkSize = range.Value.End - range.Value.Start + 1;
+                
+                if (actualChunkSize > bufferSize)
+                {
+                    range = (range.Value.Start, range.Value.Start + bufferSize - 1);
+                    actualChunkSize = bufferSize;
+                }
+
+                Response.StatusCode = 206; // Partial Content
+                Response.Headers["Content-Range"] = $"bytes {range.Value.Start}-{range.Value.End}/{fileLength}";
+                Response.Headers["Content-Length"] = actualChunkSize.ToString();
+                
+                // Buffered streaming headers
+                Response.Headers["Accept-Ranges"] = "bytes";
+                Response.Headers["Cache-Control"] = "public, max-age=86400";
+                Response.Headers["Content-Disposition"] = "inline";
+                
+                // Add streaming-specific headers for mobile
+                if (contentType.StartsWith("video/"))
+                {
+                    Response.Headers["X-Content-Type-Options"] = "nosniff";
+                    Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+                }
+
+                // Create a buffered partial stream for mobile streaming
+                var partialStream = new BufferedPartialStream(fileStream, range.Value.Start, actualChunkSize);
+                
+                return File(partialStream, contentType, fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling buffered range request: {RangeHeader}", rangeHeader);
+                return StatusCode(500, new { error = "Error handling range request", message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Handle range requests for video/audio streaming with mobile optimization
         /// </summary>
         /// <param name="fileStream">File stream</param>
@@ -620,19 +736,20 @@ namespace coptic_app_backend.Api.Controllers
         /// <param name="objectName">MinIO object name</param>
         /// <param name="quality">Video quality for streaming (default: Mobile)</param>
         /// <returns>File stream</returns>
-        [HttpGet("stream/{objectName}")]
+        [HttpGet("stream/{**objectName}")]
         [AllowAnonymous]
         public async Task<IActionResult> StreamMediaFile(string objectName, [FromQuery] VideoQuality quality = VideoQuality.Mobile)
         {
             return await StreamMediaFileInternal(objectName, quality);
         }
 
+
         /// <summary>
         /// Stream a video file directly from MinIO (for testing)
         /// </summary>
         /// <param name="objectName">MinIO object name</param>
         /// <returns>File stream</returns>
-        [HttpGet("stream-direct/{objectName}")]
+        [HttpGet("stream-direct/{**objectName}")]
         [AllowAnonymous]
         public async Task<IActionResult> StreamDirectFromMinIO(string objectName)
         {
@@ -668,20 +785,27 @@ namespace coptic_app_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Stream a video file with mobile optimization - creates compressed version on demand if needed
+        /// Paginated streaming for large videos - divides video into small chunks for better buffering
         /// </summary>
         /// <param name="objectName">MinIO object name</param>
-        /// <param name="quality">Video quality for streaming (default: Mobile)</param>
-        /// <returns>File stream</returns>
-        [HttpGet("stream-mobile/{objectName}")]
+        /// <param name="chunkSize">Chunk size in bytes (default: 256KB)</param>
+        /// <returns>Paginated video stream</returns>
+        [HttpGet("stream-paginated/{**objectName}")]
         [AllowAnonymous]
-        public async Task<IActionResult> StreamMobileOptimizedVideo(string objectName, [FromQuery] VideoQuality quality = VideoQuality.Mobile)
+        public async Task<IActionResult> StreamPaginatedVideo(string objectName, [FromQuery] int chunkSize = 262144)
         {
             try
             {
-                // URL decode the object name
                 var decodedObjectName = Uri.UnescapeDataString(objectName);
-                _logger.LogInformation("Mobile-optimized stream request for object: {ObjectName} with quality {Quality}", decodedObjectName, quality);
+                _logger.LogInformation("Paginated stream request for object: {ObjectName} with chunk size {ChunkSize}", decodedObjectName, chunkSize);
+
+                // Validate chunk size (64KB to 1MB)
+                chunkSize = Math.Max(65536, Math.Min(chunkSize, 1048576));
+
+                // Add CORS headers for Flutter compatibility
+                Response.Headers["Access-Control-Allow-Origin"] = "*";
+                Response.Headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS";
+                Response.Headers["Access-Control-Allow-Headers"] = "Range, Content-Range, Content-Length, Content-Type";
 
                 // First try to find the file in the database
                 var mediaFiles = await _mediaFileRepository.GetAllMediaFilesAsync();
@@ -693,103 +817,207 @@ namespace coptic_app_backend.Api.Controllers
                     return NotFound("File not found");
                 }
 
-                // Check if this is a video file
-                if (mediaFile.MediaType != MediaType.Video)
+                // Download file stream
+                Stream fileStream;
+                try
                 {
-                    _logger.LogInformation("File is not a video, using regular streaming: {ObjectName}", decodedObjectName);
-                    return await StreamMediaFileInternal(objectName, quality);
-                }
-
-                // For video files, check if we need to create a mobile-optimized version
-                bool needsCompression = false;
-                if (_videoCompressionService != null)
-                {
-                    needsCompression = await _videoCompressionService.IsVideoCompressionNeededAsync(
-                        Stream.Null, // We'll get the actual stream below
-                        mediaFile.FileSize, 
-                        quality
-                    );
-                }
-
-                string fileName = Path.GetFileName(decodedObjectName);
-
-                if (needsCompression && !decodedObjectName.Contains("_compressed"))
-                {
-                    _logger.LogInformation("Creating mobile-optimized version for: {ObjectName}", decodedObjectName);
-                    
-                    // Download original video - try MinIO first, then fallback to local
-                    Stream? fileStream = null;
-                    Exception? downloadError = null;
-                    
-                    // Try MinIO first (most common case)
-                    try
+                    if (mediaFile.StorageType == "MinIO")
                     {
                         fileStream = await _mediaService.DownloadFileAsync(decodedObjectName);
-                        _logger.LogInformation("Successfully downloaded from MinIO: {ObjectName}", decodedObjectName);
-                    }
-                    catch (Exception minioEx)
-                    {
-                        _logger.LogWarning(minioEx, "MinIO download failed, trying local storage: {ObjectName}", decodedObjectName);
-                        downloadError = minioEx;
-                        
-                        // Fallback to local storage
-                        try
-                        {
-                            fileStream = await _fileStorageService.DownloadFileAsync(decodedObjectName);
-                            _logger.LogInformation("Successfully downloaded from local storage: {ObjectName}", decodedObjectName);
-                        }
-                        catch (Exception localEx)
-                        {
-                            _logger.LogError(localEx, "Both MinIO and local storage download failed for: {ObjectName}", decodedObjectName);
-                            throw new Exception($"Failed to download file from both MinIO and local storage. MinIO error: {minioEx.Message}, Local error: {localEx.Message}", localEx);
-                        }
-                    }
-
-                    // Compress for mobile
-                    Stream? compressedStream = null;
-                    if (_videoCompressionService != null)
-                    {
-                        compressedStream = await _videoCompressionService.CompressVideoAsync(
-                            fileStream, 
-                            fileName, 
-                            quality
-                        );
                     }
                     else
                     {
-                        _logger.LogWarning("Video compression service not available, using original file");
-                        return await StreamMediaFileInternal(objectName, quality);
+                        fileStream = await _fileStorageService.DownloadFileAsync(decodedObjectName);
                     }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to download file for paginated streaming: {ObjectName}", decodedObjectName);
+                    return StatusCode(500, new { error = "Failed to download file", message = ex.Message });
+                }
 
-                    // Update filename for compressed version
-                    fileName = Path.GetFileNameWithoutExtension(fileName) + "_mobile.mp4";
-                    
-                    _logger.LogInformation("Created mobile-optimized version: {FileName}", fileName);
-                    
-                    // Set up streaming headers for mobile
-                    var contentType = "video/mp4";
+                var fileName = Path.GetFileName(decodedObjectName);
+                var contentType = GetContentType(fileName);
+                
+                // Set up paginated streaming headers
+                Response.Headers["Accept-Ranges"] = "bytes";
+                Response.Headers["Cache-Control"] = "public, max-age=86400";
+                Response.Headers["Content-Disposition"] = "inline";
+                Response.Headers["X-Content-Type-Options"] = "nosniff";
+                Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+                
+                // Check for range requests
+                var rangeHeader = Request.Headers["Range"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(rangeHeader))
+                {
+                    return HandlePaginatedRangeRequest(fileStream, contentType, fileName, rangeHeader, chunkSize);
+                }
+                
+                // Stream the entire file in paginated chunks
+                return new PaginatedFileResult(fileStream, contentType, fileName, chunkSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to stream paginated video: {ObjectName}", objectName);
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Chunked streaming for large video files with adaptive chunk sizes
+        /// </summary>
+        /// <param name="objectName">MinIO object name</param>
+        /// <param name="chunkSize">Chunk size in bytes (default: 512KB)</param>
+        /// <returns>Chunked file stream</returns>
+        [HttpGet("stream-chunked/{**objectName}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> StreamChunkedVideo(string objectName, [FromQuery] int chunkSize = 524288)
+        {
+            try
+            {
+                var decodedObjectName = Uri.UnescapeDataString(objectName);
+                _logger.LogInformation("Chunked stream request for object: {ObjectName} with chunk size {ChunkSize}", decodedObjectName, chunkSize);
+
+                // Validate chunk size (64KB to 2MB)
+                chunkSize = Math.Max(65536, Math.Min(chunkSize, 2097152));
+
+                // Add CORS headers for Flutter compatibility
+                Response.Headers["Access-Control-Allow-Origin"] = "*";
+                Response.Headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS";
+                Response.Headers["Access-Control-Allow-Headers"] = "Range, Content-Range, Content-Length, Content-Type";
+
+                // First try to find the file in the database
+                var mediaFiles = await _mediaFileRepository.GetAllMediaFilesAsync();
+                var mediaFile = mediaFiles.FirstOrDefault(f => f.ObjectName == decodedObjectName);
+                
+                if (mediaFile == null)
+                {
+                    _logger.LogWarning("File not found in database: {ObjectName}", decodedObjectName);
+                    return NotFound("File not found");
+                }
+
+                // Download file stream
+                Stream fileStream;
+                try
+                {
+                    if (mediaFile.StorageType == "MinIO")
+                    {
+                        fileStream = await _mediaService.DownloadFileAsync(decodedObjectName);
+                    }
+                    else
+                    {
+                        fileStream = await _fileStorageService.DownloadFileAsync(decodedObjectName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to download file for chunked streaming: {ObjectName}", decodedObjectName);
+                    return StatusCode(500, new { error = "Failed to download file", message = ex.Message });
+                }
+
+                var fileName = Path.GetFileName(decodedObjectName);
+                var contentType = GetContentType(fileName);
+                
+                // Set up chunked streaming headers
+                Response.Headers["Accept-Ranges"] = "bytes";
+                Response.Headers["Cache-Control"] = "public, max-age=86400";
+                Response.Headers["Content-Disposition"] = "inline";
+                Response.Headers["Transfer-Encoding"] = "chunked";
+                Response.Headers["X-Content-Type-Options"] = "nosniff";
+                Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+                
+                // Check for range requests
+                var rangeHeader = Request.Headers["Range"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(rangeHeader))
+                {
+                    return HandleRangeRequest(fileStream, contentType, fileName, rangeHeader);
+                }
+                
+                // Stream the entire file in chunks
+                return new ChunkedFileResult(fileStream, contentType, fileName, chunkSize);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to stream chunked video: {ObjectName}", objectName);
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Buffered streaming for mobile devices with optimized chunk sizes
+        /// </summary>
+        /// <param name="objectName">MinIO object name</param>
+        /// <param name="bufferSize">Buffer size in bytes (default: 128KB)</param>
+        /// <returns>Buffered video stream</returns>
+        [HttpGet("stream-buffered/{**objectName}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> StreamBufferedVideo(string objectName, [FromQuery] int bufferSize = 131072)
+        {
+            try
+            {
+                var decodedObjectName = Uri.UnescapeDataString(objectName);
+                _logger.LogInformation("Buffered stream request for object: {ObjectName} with buffer size {BufferSize}", decodedObjectName, bufferSize);
+
+                // Validate buffer size (32KB to 512KB)
+                bufferSize = Math.Max(32768, Math.Min(bufferSize, 524288));
+
+                // Add CORS headers for Flutter compatibility
+                Response.Headers["Access-Control-Allow-Origin"] = "*";
+                Response.Headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS";
+                Response.Headers["Access-Control-Allow-Headers"] = "Range, Content-Range, Content-Length, Content-Type";
+
+                // First try to find the file in the database
+                var mediaFiles = await _mediaFileRepository.GetAllMediaFilesAsync();
+                var mediaFile = mediaFiles.FirstOrDefault(f => f.ObjectName == decodedObjectName);
+                
+                if (mediaFile == null)
+                {
+                    _logger.LogWarning("File not found in database: {ObjectName}", decodedObjectName);
+                    return NotFound("File not found");
+                }
+
+                // Download file stream
+                Stream fileStream;
+                try
+                {
+                    if (mediaFile.StorageType == "MinIO")
+                    {
+                        fileStream = await _mediaService.DownloadFileAsync(decodedObjectName);
+                    }
+                    else
+                    {
+                        fileStream = await _fileStorageService.DownloadFileAsync(decodedObjectName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to download file for buffered streaming: {ObjectName}", decodedObjectName);
+                    return StatusCode(500, new { error = "Failed to download file", message = ex.Message });
+                }
+
+                var fileName = Path.GetFileName(decodedObjectName);
+                var contentType = GetContentType(fileName);
+                
+                // Set up buffered streaming headers
                     Response.Headers["Accept-Ranges"] = "bytes";
                     Response.Headers["Cache-Control"] = "public, max-age=86400";
                     Response.Headers["Content-Disposition"] = "inline";
+                Response.Headers["X-Content-Type-Options"] = "nosniff";
+                Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
                     
                     // Check for range requests
                     var rangeHeader = Request.Headers["Range"].FirstOrDefault();
                     if (!string.IsNullOrEmpty(rangeHeader))
                     {
-                        return HandleRangeRequest(compressedStream, contentType, fileName, rangeHeader);
-                    }
-                    
-                    return File(compressedStream, contentType, fileName);
+                    return HandleBufferedRangeRequest(fileStream, contentType, fileName, rangeHeader, bufferSize);
                 }
-                else
-                {
-                    _logger.LogInformation("Using existing file for streaming: {ObjectName}", decodedObjectName);
-                    return await StreamMediaFileInternal(objectName, quality);
-                }
+                
+                // Stream the entire file with buffering
+                return new BufferedFileResult(fileStream, contentType, fileName, bufferSize);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to stream mobile-optimized video: {ObjectName}", objectName);
+                _logger.LogError(ex, "Failed to stream buffered video: {ObjectName}", objectName);
                 return StatusCode(500, new { error = "Internal server error", message = ex.Message });
             }
         }
@@ -907,7 +1135,7 @@ namespace coptic_app_backend.Api.Controllers
         /// </summary>
         /// <param name="objectName">MinIO object name</param>
         /// <returns>File stream</returns>
-        [HttpGet("download/{objectName}")]
+        [HttpGet("download/{**objectName}")]
         [AllowAnonymous]
         public async Task<IActionResult> DownloadMediaFile(string objectName)
         {
@@ -1012,7 +1240,7 @@ namespace coptic_app_backend.Api.Controllers
         /// <param name="objectName">MinIO object name</param>
         /// <param name="quality">Video quality for compression (default: Mobile)</param>
         /// <returns>Compressed video stream</returns>
-        [HttpGet("compress-stream/{objectName}")]
+        [HttpGet("compress-stream/{**objectName}")]
         [AllowAnonymous]
         public async Task<IActionResult> CompressAndStreamVideo(string objectName, [FromQuery] VideoQuality quality = VideoQuality.Mobile)
         {
@@ -1101,7 +1329,7 @@ namespace coptic_app_backend.Api.Controllers
         /// </summary>
         /// <param name="objectName">MinIO object name</param>
         /// <returns>MinIO URL</returns>
-        [HttpGet("minio-url/{objectName}")]
+        [HttpGet("minio-url/{**objectName}")]
         [AllowAnonymous]
         public async Task<ActionResult<string>> GetMinIOUrl(string objectName)
         {
@@ -1131,7 +1359,7 @@ namespace coptic_app_backend.Api.Controllers
         /// </summary>
         /// <param name="objectName">MinIO object name or filename</param>
         /// <returns>Download URL</returns>
-        [HttpGet("url/{objectName}")]
+        [HttpGet("url/{**objectName}")]
         [AllowAnonymous]
         public async Task<ActionResult<string>> GetMediaFileUrl(string objectName)
         {
@@ -1183,7 +1411,7 @@ namespace coptic_app_backend.Api.Controllers
         /// </summary>
         /// <param name="objectName">MinIO object name</param>
         /// <returns>Delete result</returns>
-        [HttpDelete("{objectName}")]
+        [HttpDelete("{**objectName}")]
         [Authorize(Policy = "AbuneOnly")]
         public async Task<ActionResult> DeleteMediaFile(string objectName)
         {
@@ -1699,6 +1927,109 @@ namespace coptic_app_backend.Api.Controllers
     }
 
     /// <summary>
+    /// Paginated file result for streaming large files in small chunks like pagination
+    /// </summary>
+    public class PaginatedFileResult : IActionResult
+    {
+        private readonly Stream _fileStream;
+        private readonly string _contentType;
+        private readonly string _fileName;
+        private readonly int _chunkSize;
+
+        public PaginatedFileResult(Stream fileStream, string contentType, string fileName, int chunkSize)
+        {
+            _fileStream = fileStream;
+            _contentType = contentType;
+            _fileName = fileName;
+            _chunkSize = chunkSize;
+        }
+
+        public async Task ExecuteResultAsync(ActionContext context)
+        {
+            var response = context.HttpContext.Response;
+            
+            response.ContentType = _contentType;
+            response.Headers["Accept-Ranges"] = "bytes";
+            response.Headers["Cache-Control"] = "public, max-age=86400";
+            response.Headers["Content-Disposition"] = "inline";
+            response.Headers["Content-Length"] = _fileStream.Length.ToString();
+
+            var buffer = new byte[_chunkSize];
+            int bytesRead;
+            long totalBytesRead = 0;
+
+            try
+            {
+                while ((bytesRead = await _fileStream.ReadAsync(buffer, 0, _chunkSize)) > 0)
+                {
+                    var chunk = new ReadOnlyMemory<byte>(buffer, 0, bytesRead);
+                    await response.Body.WriteAsync(chunk);
+                    await response.Body.FlushAsync();
+                    
+                    totalBytesRead += bytesRead;
+                    
+                    // Add small delay between chunks for better buffering (like pagination)
+                    if (bytesRead == _chunkSize)
+                    {
+                        await Task.Delay(10); // 10ms delay between chunks
+                    }
+                }
+            }
+            finally
+            {
+                _fileStream.Dispose();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Buffered file result for mobile streaming with optimized buffering
+    /// </summary>
+    public class BufferedFileResult : IActionResult
+    {
+        private readonly Stream _fileStream;
+        private readonly string _contentType;
+        private readonly string _fileName;
+        private readonly int _bufferSize;
+
+        public BufferedFileResult(Stream fileStream, string contentType, string fileName, int bufferSize)
+        {
+            _fileStream = fileStream;
+            _contentType = contentType;
+            _fileName = fileName;
+            _bufferSize = bufferSize;
+        }
+
+        public async Task ExecuteResultAsync(ActionContext context)
+        {
+            var response = context.HttpContext.Response;
+            
+            response.ContentType = _contentType;
+            response.Headers["Accept-Ranges"] = "bytes";
+            response.Headers["Cache-Control"] = "public, max-age=86400";
+            response.Headers["Content-Disposition"] = "inline";
+            response.Headers["Content-Length"] = _fileStream.Length.ToString();
+
+            var buffer = new byte[_bufferSize];
+            int bytesRead;
+
+            try
+            {
+                while ((bytesRead = await _fileStream.ReadAsync(buffer, 0, _bufferSize)) > 0)
+                {
+                    var chunk = new ReadOnlyMemory<byte>(buffer, 0, bytesRead);
+                    await response.Body.WriteAsync(chunk);
+                    await response.Body.FlushAsync();
+                }
+            }
+            finally
+            {
+                _fileStream.Dispose();
+            }
+        }
+    }
+
+    /// <summary>
     /// Buffered partial stream optimized for mobile streaming
     /// </summary>
     public class BufferedPartialStream : Stream
@@ -1797,6 +2128,53 @@ namespace coptic_app_backend.Api.Controllers
 
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    /// <summary>
+    /// Chunked file result for streaming large files in chunks
+    /// </summary>
+    public class ChunkedFileResult : IActionResult
+    {
+        private readonly Stream _fileStream;
+        private readonly string _contentType;
+        private readonly string _fileName;
+        private readonly int _chunkSize;
+
+        public ChunkedFileResult(Stream fileStream, string contentType, string fileName, int chunkSize)
+        {
+            _fileStream = fileStream;
+            _contentType = contentType;
+            _fileName = fileName;
+            _chunkSize = chunkSize;
+        }
+
+        public async Task ExecuteResultAsync(ActionContext context)
+        {
+            var response = context.HttpContext.Response;
+            
+            response.ContentType = _contentType;
+            response.Headers["Transfer-Encoding"] = "chunked";
+            response.Headers["Accept-Ranges"] = "bytes";
+            response.Headers["Cache-Control"] = "public, max-age=86400";
+            response.Headers["Content-Disposition"] = "inline";
+
+            var buffer = new byte[_chunkSize];
+            int bytesRead;
+
+            try
+            {
+                while ((bytesRead = await _fileStream.ReadAsync(buffer, 0, _chunkSize)) > 0)
+                {
+                    var chunk = new ReadOnlyMemory<byte>(buffer, 0, bytesRead);
+                    await response.Body.WriteAsync(chunk);
+                    await response.Body.FlushAsync();
+                }
+            }
+            finally
+            {
+                _fileStream.Dispose();
+            }
+        }
     }
 
     #endregion
